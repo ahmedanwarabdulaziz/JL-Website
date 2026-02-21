@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Admin-only: same emails as in app (src/lib/constants.ts)
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'ahmedanwarabdulaziz@gmail.com' ||
+        request.auth.token.email == 'jl@jlupholstery.com'
+      );
+    }
+
+    match /tagCategories/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /tags/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /upholsteryPieces/{docId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
