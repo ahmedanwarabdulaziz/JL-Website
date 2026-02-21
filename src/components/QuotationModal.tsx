@@ -361,7 +361,6 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
                   type="file"
                   hidden
                   accept="image/*"
-                  capture="environment"
                   multiple
                   onChange={(e) => {
                     const list = Array.from(e.target.files ?? []);
