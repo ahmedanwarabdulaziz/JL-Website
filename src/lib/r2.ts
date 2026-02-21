@@ -23,8 +23,14 @@ export const r2Client =
 
 export const R2_BUCKET = bucketName ?? "jlwebsite";
 
+/** Optional separate bucket for quotation photos (review in admin). Falls back to R2_BUCKET with prefix if not set. */
+export const R2_QUOTATIONS_BUCKET = process.env.R2_QUOTATIONS_BUCKET ?? null;
+
 /** Public base URL for viewing uploaded images (R2 public bucket or custom domain). */
 export const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "";
+
+/** Public base URL for quotation images (separate bucket or same as R2_PUBLIC_URL). */
+export const R2_QUOTATIONS_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_QUOTATIONS_PUBLIC_URL ?? R2_PUBLIC_URL;
 
 /**
  * Build the public URL for an object key (path inside the bucket).
@@ -35,6 +41,15 @@ export function getR2PublicUrl(key: string): string {
   const path = key.startsWith("/") ? key.slice(1) : key;
   return `${base}/${path}`;
 }
+
+/** Build public URL for a key in the quotations storage (separate bucket or prefix). */
+export function getR2QuotationsPublicUrl(key: string): string {
+  const base = R2_QUOTATIONS_PUBLIC_URL.replace(/\/$/, "");
+  const path = key.startsWith("/") ? key.slice(1) : key;
+  return `${base}/${path}`;
+}
+
+const QUOTATIONS_PREFIX = "quotation-uploads/";
 
 export async function uploadToR2(
   key: string,
@@ -51,6 +66,26 @@ export async function uploadToR2(
     })
   );
   return getR2PublicUrl(key);
+}
+
+/** Upload to quotations storage (separate bucket or prefix in main bucket). Use for quotation photos so they can be reviewed in admin. */
+export async function uploadToR2Quotations(
+  key: string,
+  body: Buffer | Uint8Array,
+  contentType: string
+): Promise<string> {
+  if (!r2Client) throw new Error("R2 is not configured");
+  const bucket = R2_QUOTATIONS_BUCKET ?? R2_BUCKET;
+  const objectKey = R2_QUOTATIONS_BUCKET ? key : QUOTATIONS_PREFIX + key;
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+  return getR2QuotationsPublicUrl(R2_QUOTATIONS_BUCKET ? key : QUOTATIONS_PREFIX + key);
 }
 
 export async function listR2Keys(prefix?: string): Promise<string[]> {

@@ -16,6 +16,7 @@ import { db } from "@/lib/firebase";
 const CATEGORIES = "tagCategories";
 const TAGS = "tags";
 const PIECES = "upholsteryPieces";
+const QUOTATION_REQUESTS = "quotationRequests";
 
 export type TagCategoryType = "mandatory" | "optional";
 export type TagCategorySelection = "single" | "multiple";
@@ -45,6 +46,24 @@ export interface UpholsteryPiece {
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
   createdBy?: string;
+}
+
+export type QuotationRequestStatus = "new" | "replied" | "closed";
+
+export interface QuotationRequest {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  description: string;
+  fileName?: string;
+  /** Single image/file URL (R2) for display. */
+  fileUrl?: string;
+  /** Multiple image URLs when form supports more than one file. */
+  fileUrls?: string[];
+  status: QuotationRequestStatus;
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
 }
 
 function fromDoc<T extends { id: string }>(docSnap: { id: string; data: () => DocumentData }): T {
@@ -141,4 +160,24 @@ export function slugify(title: string): string {
     .trim()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
+}
+
+export async function getQuotationRequests(): Promise<QuotationRequest[]> {
+  const q = query(
+    collection(db, QUOTATION_REQUESTS),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => fromDoc<QuotationRequest>(d));
+}
+
+export async function updateQuotationRequest(
+  id: string,
+  data: Partial<Pick<QuotationRequest, "status">>
+): Promise<void> {
+  await setDoc(
+    doc(db, QUOTATION_REQUESTS, id),
+    { ...data, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }

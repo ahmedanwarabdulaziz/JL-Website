@@ -18,5 +18,14 @@ service cloud.firestore {
     match /upholsteryPieces/{docId} {
       allow read, write: if isAdmin();
     }
+    match /quotationRequests/{docId} {
+      allow create: if true;
+      // Allow unauthenticated update only to add image links (once), when service account key cannot be used
+      allow update: if isAdmin()
+        || (request.auth == null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fileUrl', 'fileUrls', 'fileName', 'updatedAt'])
+            && !('fileUrls' in resource.data));
+      allow read, delete: if isAdmin();
+    }
   }
 }

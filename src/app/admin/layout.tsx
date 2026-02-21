@@ -22,6 +22,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import LabelIcon from "@mui/icons-material/Label";
 import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import HomeIcon from "@mui/icons-material/Home";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,7 @@ const MAIN_MAX_WIDTH = 900;
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: <DashboardIcon /> },
+  { href: "/admin/quotations", label: "Quotations", icon: <RequestQuoteIcon /> },
   { href: "/admin/pieces", label: "Gallery", icon: <PhotoLibraryIcon /> },
   { href: "/admin/tags", label: "Tag system", icon: <LabelIcon /> },
   { href: "/admin/pieces/new", label: "Add piece", icon: <AddPhotoAlternateIcon /> },
