@@ -115,6 +115,15 @@ export async function createUpholsteryPiece(
   return ref.id;
 }
 
+export async function getUpholsteryPieces(): Promise<UpholsteryPiece[]> {
+  const q = query(
+    collection(db, PIECES),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => fromDoc<UpholsteryPiece>(d));
+}
+
 export async function getUpholsteryPieceBySlug(slug: string): Promise<UpholsteryPiece | null> {
   const q = query(
     collection(db, PIECES),

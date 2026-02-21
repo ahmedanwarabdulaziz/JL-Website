@@ -12,17 +12,14 @@ import {
   Stepper,
   Step,
   StepLabel,
-  FormControl,
-  FormLabel,
-  FormGroup,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Checkbox,
   Alert,
   Stack,
   useTheme,
   useMediaQuery,
+  Paper,
+  Chip,
+  FormControl,
+  FormLabel,
 } from "@mui/material";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag } from "@/lib/firestore";
@@ -315,56 +312,78 @@ export default function NewPiecePage() {
           </Stack>
         )}
 
-        {/* Step 2: Tags */}
+        {/* Step 2: Tags - one card per category, chip selection */}
         {activeStep === 2 && (
           <Stack spacing={3}>
-            {tagsByCategory.map(({ category, tags: catTags }) => (
-              <FormControl key={category.id} component="fieldset" required={category.type === "mandatory"}>
-                <FormLabel component="legend">
-                  {category.name} {category.type === "mandatory" && "*"}
-                </FormLabel>
-                {category.selection === "single" ? (
-                  <RadioGroup
-                    value={(selectedTagIds[category.id] ?? [])[0] ?? ""}
-                    onChange={(_, v) => handleTagChange(category.id, v, true, "single")}
-                    sx={{ flexDirection: "row", flexWrap: "wrap", gap: 0.5 }}
-                  >
-                    {catTags.map((t) => (
-                      <FormControlLabel
-                        key={t.id}
-                        value={t.id}
-                        control={<Radio />}
-                        label={t.label}
-                        sx={{ minHeight: 44 }}
+            {tagsByCategory.map(({ category, tags: catTags }) => {
+              const selected = selectedTagIds[category.id] ?? [];
+              const isSingle = category.selection === "single";
+              return (
+                <Paper
+                  key={category.id}
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    borderColor: category.type === "mandatory" && selected.length === 0 ? "error.light" : "divider",
+                    borderWidth: category.type === "mandatory" && selected.length === 0 ? 1.5 : 1,
+                  }}
+                >
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
+                      <Typography variant="subtitle1" fontWeight={600} color="text.primary">
+                        {category.name}
+                      </Typography>
+                      {category.type === "mandatory" && (
+                        <Chip label="Required" size="small" color="primary" variant="outlined" />
+                      )}
+                      <Chip
+                        label={isSingle ? "Pick one" : "Pick one or more"}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 500 }}
                       />
-                    ))}
-                  </RadioGroup>
-                ) : (
-                  <FormGroup row sx={{ gap: 0.5 }}>
-                    {catTags.map((t) => (
-                      <FormControlLabel
-                        key={t.id}
-                        control={
-                          <Checkbox
-                            checked={(selectedTagIds[category.id] ?? []).includes(t.id)}
-                            onChange={(e) => handleTagChange(category.id, t.id, e.target.checked, "multiple")}
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {catTags.length === 0
+                        ? "No tags in this category yet. Add tags in Tag system first."
+                        : isSingle
+                          ? "Select one tag."
+                          : "Select one or more tags."}
+                    </Typography>
+                    <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
+                      {catTags.map((t) => {
+                        const isSelected = selected.includes(t.id);
+                        return (
+                          <Chip
+                            key={t.id}
+                            label={t.label}
+                            onClick={() =>
+                              handleTagChange(category.id, t.id, !isSelected, category.selection)
+                            }
+                            variant={isSelected ? "filled" : "outlined"}
+                            color={isSelected ? "primary" : "default"}
+                            sx={{
+                              minHeight: 40,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                              "&:hover": { opacity: 0.9 },
+                            }}
                           />
-                        }
-                        label={t.label}
-                        sx={{ minHeight: 44 }}
-                      />
-                    ))}
-                  </FormGroup>
-                )}
-              </FormControl>
-            ))}
+                        );
+                      })}
+                    </Stack>
+                  </Stack>
+                </Paper>
+              );
+            })}
             <Button
               variant="contained"
               size="large"
               fullWidth
               disabled={saving}
               onClick={handleSave}
-              sx={{ minHeight: 48 }}
+              sx={{ minHeight: 48, mt: 1 }}
             >
               {saving ? <CircularProgress size={24} color="inherit" /> : "Save piece"}
             </Button>
