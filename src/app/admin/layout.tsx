@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import LabelIcon from "@mui/icons-material/Label";
 import PhotoLibraryIcon from "@mui/icons-material/PhotoLibrary";
 import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
+import WorkspacesIcon from "@mui/icons-material/Workspaces";
 import HomeIcon from "@mui/icons-material/Home";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: <DashboardIcon /> },
   { href: "/admin/quotations", label: "Quotations", icon: <RequestQuoteIcon /> },
   { href: "/admin/pieces", label: "Gallery", icon: <PhotoLibraryIcon /> },
+  { href: "/admin/projects", label: "Projects", icon: <WorkspacesIcon /> },
   { href: "/admin/tags", label: "Tag system", icon: <LabelIcon /> },
   { href: "/admin/pieces/new", label: "Add piece", icon: <AddPhotoAlternateIcon /> },
 ];
@@ -46,16 +48,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, isAdmin, loading, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const nonAdminRedirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (nonAdminRedirectTimeout.current) {
+      clearTimeout(nonAdminRedirectTimeout.current);
+      nonAdminRedirectTimeout.current = null;
+    }
     if (loading) return;
     if (!user) {
       router.replace("/login");
       return;
     }
-    if (!isAdmin) {
-      router.replace("/");
+    // Give Firebase Auth time to restore email after full-page load before treating as non-admin
+    if (user.email != null && !isAdmin) {
+      nonAdminRedirectTimeout.current = setTimeout(() => {
+        nonAdminRedirectTimeout.current = null;
+        router.replace("/");
+      }, 600);
     }
+    return () => {
+      if (nonAdminRedirectTimeout.current) {
+        clearTimeout(nonAdminRedirectTimeout.current);
+        nonAdminRedirectTimeout.current = null;
+      }
+    };
   }, [user, isAdmin, loading, router]);
 
   const handleSignOut = async () => {
@@ -127,7 +144,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </Box>
   );
 
-  if (loading || !user || !isAdmin) {
+  // Show dashboard when we have user and (they're admin OR email not yet loaded - give auth time to settle)
+  const canShowAdmin = user && (isAdmin || user.email == null);
+  if (loading || !user || !canShowAdmin) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100dvh" }}>
         <CircularProgress />

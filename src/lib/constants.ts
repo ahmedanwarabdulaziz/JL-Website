@@ -5,6 +5,6 @@ export const ADMIN_EMAILS = [
 ] as const;
 
 export function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return (ADMIN_EMAILS as readonly string[]).includes(email.toLowerCase());
+  if (email == null || typeof email !== "string") return false;
+  return (ADMIN_EMAILS as readonly string[]).includes(email.trim().toLowerCase());
 }

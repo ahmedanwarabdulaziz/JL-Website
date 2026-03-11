@@ -25,6 +25,8 @@ import {
   Tooltip,
 } from "@mui/material";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag } from "@/lib/firestore";
 import {
@@ -32,6 +34,10 @@ import {
   getTags,
   createTagCategory,
   createTag,
+  updateTagCategory,
+  updateTag,
+  deleteTagCategory,
+  deleteTag,
   type TagCategoryType,
   type TagCategorySelection,
 } from "@/lib/firestore";
@@ -50,6 +56,19 @@ export default function AdminTagsPage() {
   const [tagCategoryId, setTagCategoryId] = useState("");
   const [tagLabel, setTagLabel] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryType, setEditCategoryType] = useState<TagCategoryType>("mandatory");
+  const [editCategorySelection, setEditCategorySelection] = useState<TagCategorySelection>("single");
+
+  const [editTagId, setEditTagId] = useState<string | null>(null);
+  const [editTagLabel, setEditTagLabel] = useState("");
+  const [editTagCategoryId, setEditTagCategoryId] = useState("");
+
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
+  const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -73,6 +92,77 @@ export default function AdminTagsPage() {
     })();
   }, [user, isAdmin]);
 
+  const loadData = async () => {
+    const [cats, allTags] = await Promise.all([getTagCategories(), getTags()]);
+    setCategories(cats);
+    setTags(allTags);
+  };
+
+  const openEditCategory = (c: TagCategory) => {
+    setEditCategoryId(c.id);
+    setEditCategoryName(c.name);
+    setEditCategoryType(c.type);
+    setEditCategorySelection(c.selection);
+  };
+
+  const handleSaveEditCategory = async () => {
+    if (!editCategoryId || !editCategoryName.trim()) return;
+    setSaving(true);
+    try {
+      await updateTagCategory(editCategoryId, {
+        name: editCategoryName.trim(),
+        type: editCategoryType,
+        selection: editCategorySelection,
+      });
+      await loadData();
+      setEditCategoryId(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditTag = (t: Tag) => {
+    setEditTagId(t.id);
+    setEditTagLabel(t.label);
+    setEditTagCategoryId(t.categoryId);
+  };
+
+  const handleSaveEditTag = async () => {
+    if (!editTagId || !editTagLabel.trim() || !editTagCategoryId) return;
+    setSaving(true);
+    try {
+      await updateTag(editTagId, { label: editTagLabel.trim(), categoryId: editTagCategoryId });
+      await loadData();
+      setEditTagId(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!deleteCategoryId) return;
+    setDeleting(true);
+    try {
+      await deleteTagCategory(deleteCategoryId);
+      await loadData();
+      setDeleteCategoryId(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteTag = async () => {
+    if (!deleteTagId) return;
+    setDeleting(true);
+    try {
+      await deleteTag(deleteTagId);
+      await loadData();
+      setDeleteTagId(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleCreateCategory = async () => {
     if (!categoryName.trim()) return;
     setSaving(true);
@@ -84,9 +174,7 @@ export default function AdminTagsPage() {
         selection: categorySelection,
         order,
       });
-      const [cats, allTags] = await Promise.all([getTagCategories(), getTags()]);
-      setCategories(cats);
-      setTags(allTags);
+      await loadData();
       setCategoryName("");
       setCategoryOpen(false);
     } finally {
@@ -105,8 +193,7 @@ export default function AdminTagsPage() {
     setSaving(true);
     try {
       await createTag({ categoryId: tagCategoryId, label: tagLabel.trim() });
-      const allTags = await getTags();
-      setTags(allTags);
+      await loadData();
       setTagLabel("");
       setTagOpen(false);
     } finally {
@@ -172,6 +259,28 @@ export default function AdminTagsPage() {
                         <Typography fontWeight={600}>{category.name}</Typography>
                         <Chip label={category.type} size="small" variant="outlined" />
                         <Chip label={category.selection} size="small" variant="outlined" />
+                        <Tooltip title="Edit category">
+                          <IconButton
+                            color="primary"
+                            onClick={() => openEditCategory(category)}
+                            size="small"
+                            sx={{ minWidth: 44, minHeight: 44 }}
+                            aria-label={`Edit ${category.name}`}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete category">
+                          <IconButton
+                            color="error"
+                            onClick={() => setDeleteCategoryId(category.id)}
+                            size="small"
+                            sx={{ minWidth: 44, minHeight: 44 }}
+                            aria-label={`Delete ${category.name}`}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Add tag to this category">
                           <IconButton
                             color="primary"
@@ -186,12 +295,19 @@ export default function AdminTagsPage() {
                       </Stack>
                     }
                     secondary={
-                      <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
+                      <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }} alignItems="center">
                         {catTags.length === 0 ? (
                           <Typography variant="body2" color="text.secondary">No tags yet</Typography>
                         ) : (
                           catTags.map((t) => (
-                            <Chip key={t.id} label={t.label} size="small" />
+                            <Chip
+                              key={t.id}
+                              label={t.label}
+                              size="small"
+                              onClick={() => openEditTag(t)}
+                              onDelete={() => setDeleteTagId(t.id)}
+                              sx={{ cursor: "pointer" }}
+                            />
                           ))
                         )}
                       </Stack>
@@ -282,6 +398,114 @@ export default function AdminTagsPage() {
           <Button onClick={() => setTagOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleCreateTag} disabled={saving || !tagLabel.trim() || !tagCategoryId}>
             {saving ? <CircularProgress size={20} /> : "Add"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editCategoryId !== null} onClose={() => setEditCategoryId(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit category</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Name"
+              value={editCategoryName}
+              onChange={(e) => setEditCategoryName(e.target.value)}
+              fullWidth
+              autoFocus
+              slotProps={{ input: { style: { minHeight: 44 } } }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={editCategoryType}
+                label="Type"
+                onChange={(e) => setEditCategoryType(e.target.value as TagCategoryType)}
+                slotProps={{ input: { style: { minHeight: 44 } } }}
+              >
+                <MenuItem value="mandatory">Mandatory</MenuItem>
+                <MenuItem value="optional">Optional</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Selection</InputLabel>
+              <Select
+                value={editCategorySelection}
+                label="Selection"
+                onChange={(e) => setEditCategorySelection(e.target.value as TagCategorySelection)}
+                slotProps={{ input: { style: { minHeight: 44 } } }}
+              >
+                <MenuItem value="single">Single</MenuItem>
+                <MenuItem value="multiple">Multiple</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setEditCategoryId(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveEditCategory} disabled={saving || !editCategoryName.trim()}>
+            {saving ? <CircularProgress size={20} /> : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editTagId !== null} onClose={() => setEditTagId(null)} fullWidth maxWidth="xs">
+        <DialogTitle>Edit tag</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={editTagCategoryId}
+                label="Category"
+                onChange={(e) => setEditTagCategoryId(e.target.value)}
+                slotProps={{ input: { style: { minHeight: 44 } } }}
+              >
+                {categories.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Tag label"
+              value={editTagLabel}
+              onChange={(e) => setEditTagLabel(e.target.value)}
+              fullWidth
+              slotProps={{ input: { style: { minHeight: 44 } } }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setEditTagId(null)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveEditTag} disabled={saving || !editTagLabel.trim() || !editTagCategoryId}>
+            {saving ? <CircularProgress size={20} /> : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteCategoryId !== null} onClose={() => setDeleteCategoryId(null)}>
+        <DialogTitle>Delete category?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            This will delete the category and all tags inside it. Pieces that use these tags will keep the tag IDs but the tags will no longer exist. This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setDeleteCategoryId(null)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteCategory} disabled={deleting}>
+            {deleting ? <CircularProgress size={20} /> : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteTagId !== null} onClose={() => setDeleteTagId(null)}>
+        <DialogTitle>Delete tag?</DialogTitle>
+        <DialogContent>
+          <Typography>Pieces that use this tag will keep the tag ID but the tag will no longer exist. This cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2 }}>
+          <Button onClick={() => setDeleteTagId(null)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteTag} disabled={deleting}>
+            {deleting ? <CircularProgress size={20} /> : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>

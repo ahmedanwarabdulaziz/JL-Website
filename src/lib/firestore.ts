@@ -1,9 +1,11 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   addDoc,
   setDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -16,6 +18,7 @@ import { db } from "@/lib/firebase";
 const CATEGORIES = "tagCategories";
 const TAGS = "tags";
 const PIECES = "upholsteryPieces";
+const PROJECTS = "projects";
 const QUOTATION_REQUESTS = "quotationRequests";
 
 export type TagCategoryType = "mandatory" | "optional";
@@ -42,7 +45,36 @@ export interface UpholsteryPiece {
   metaDescription?: string;
   storageKey: string;
   publicUrl: string;
+  /** Optional thumbnail URL for gallery listing (smaller, faster load). */
+  thumbnailUrl?: string;
   tagIds: string[];
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+  createdBy?: string;
+}
+
+export interface StoredImage {
+  storageKey: string;
+  publicUrl: string;
+  thumbnailUrl?: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  slug: string;
+  metaDescription?: string;
+  primaryImage: StoredImage;
+  /** When primary was chosen from a piece, its id (so we don't delete that key from R2). */
+  primaryImageFromPieceId?: string;
+  /** Ordered list of piece ids included in the project. */
+  pieceIds: string[];
+  beforeImages?: StoredImage[];
+  afterImages?: StoredImage[];
+  /** Tags apply to the whole project (primary + all before/after images as one). */
+  tagIds: string[];
+  /** R2 storage keys uploaded for this project (primary when uploaded, before/after). Deleted on project delete. */
+  uploadedStorageKeys?: string[];
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
   createdBy?: string;
@@ -111,6 +143,16 @@ export async function updateTag(id: string, data: Partial<Omit<Tag, "id">>): Pro
   await setDoc(doc(db, TAGS, id), data, { merge: true });
 }
 
+export async function deleteTag(id: string): Promise<void> {
+  await deleteDoc(doc(db, TAGS, id));
+}
+
+export async function deleteTagCategory(id: string): Promise<void> {
+  const catTags = await getTagsByCategoryId(id);
+  for (const t of catTags) await deleteDoc(doc(db, TAGS, t.id));
+  await deleteDoc(doc(db, CATEGORIES, id));
+}
+
 export async function slugExists(slug: string, excludeId?: string): Promise<boolean> {
   const q = query(
     collection(db, PIECES),
@@ -123,11 +165,26 @@ export async function slugExists(slug: string, excludeId?: string): Promise<bool
   return false;
 }
 
+export async function projectSlugExists(slug: string, excludeId?: string): Promise<boolean> {
+  const q = query(
+    collection(db, PROJECTS),
+    where("slug", "==", slug)
+  );
+  const snap = await getDocs(q);
+  for (const d of snap.docs) {
+    if (d.id !== excludeId) return true;
+  }
+  return false;
+}
+
 export async function createUpholsteryPiece(
   data: Omit<UpholsteryPiece, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Omit<UpholsteryPiece, "id" | "createdAt" | "updatedAt">;
   const ref = await addDoc(collection(db, PIECES), {
-    ...data,
+    ...clean,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -143,6 +200,26 @@ export async function getUpholsteryPieces(): Promise<UpholsteryPiece[]> {
   return snap.docs.map((d) => fromDoc<UpholsteryPiece>(d));
 }
 
+export async function getUpholsteryPieceById(id: string): Promise<UpholsteryPiece | null> {
+  const snap = await getDoc(doc(db, PIECES, id));
+  if (!snap.exists()) return null;
+  return fromDoc<UpholsteryPiece>({ id: snap.id, data: () => snap.data() });
+}
+
+export async function updateUpholsteryPiece(
+  id: string,
+  data: Partial<Omit<UpholsteryPiece, "id" | "createdAt" | "updatedAt">>
+): Promise<void> {
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Partial<Omit<UpholsteryPiece, "id" | "createdAt" | "updatedAt">>;
+  await setDoc(doc(db, PIECES, id), { ...clean, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function deleteUpholsteryPiece(id: string): Promise<void> {
+  await deleteDoc(doc(db, PIECES, id));
+}
+
 export async function getUpholsteryPieceBySlug(slug: string): Promise<UpholsteryPiece | null> {
   const q = query(
     collection(db, PIECES),
@@ -152,6 +229,60 @@ export async function getUpholsteryPieceBySlug(slug: string): Promise<Upholstery
   const first = snap.docs[0];
   if (!first) return null;
   return fromDoc<UpholsteryPiece>(first);
+}
+
+export async function createProject(
+  data: Omit<Project, "id" | "createdAt" | "updatedAt">
+): Promise<string> {
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Omit<Project, "id" | "createdAt" | "updatedAt">;
+  const ref = await addDoc(collection(db, PROJECTS), {
+    ...clean,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function getProjects(): Promise<Project[]> {
+  const q = query(
+    collection(db, PROJECTS),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => fromDoc<Project>(d));
+}
+
+export async function getProjectById(id: string): Promise<Project | null> {
+  const snap = await getDoc(doc(db, PROJECTS, id));
+  if (!snap.exists()) return null;
+  return fromDoc<Project>({ id: snap.id, data: () => snap.data() });
+}
+
+export async function getProjectBySlug(slug: string): Promise<Project | null> {
+  const q = query(
+    collection(db, PROJECTS),
+    where("slug", "==", slug)
+  );
+  const snap = await getDocs(q);
+  const first = snap.docs[0];
+  if (!first) return null;
+  return fromDoc<Project>(first);
+}
+
+export async function updateProject(
+  id: string,
+  data: Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>
+): Promise<void> {
+  const clean = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Partial<Omit<Project, "id" | "createdAt" | "updatedAt">>;
+  await setDoc(doc(db, PROJECTS, id), { ...clean, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await deleteDoc(doc(db, PROJECTS, id));
 }
 
 export function slugify(title: string): string {

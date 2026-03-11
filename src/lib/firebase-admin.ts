@@ -16,11 +16,28 @@ export interface QuotationRequestData {
 
 let adminApp: ReturnType<typeof getApp> | null = null;
 
+function getServiceAccountKey(): string | null {
+  const env = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (env) return env;
+  if (typeof require !== "undefined") {
+    try {
+      const path = require("path");
+      const fs = require("fs");
+      const root = path.resolve(process.cwd());
+      const p = path.join(root, "firebase-service-account.json");
+      if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
 function getAdminApp(): ReturnType<typeof getApp> {
   if (getApps().length > 0) {
     return getApp();
   }
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const key = getServiceAccountKey();
   if (!key) {
     throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is required for server-side Firestore (e.g. saving quotation requests).");
   }
@@ -40,7 +57,7 @@ export function getAdminFirestore(): Firestore {
 
 /** Returns Admin Firestore when FIREBASE_SERVICE_ACCOUNT_KEY is set; otherwise null. Use when admin is optional (e.g. quotation upload can fall back to client data). */
 export function getAdminFirestoreIfAvailable(): Firestore | null {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  if (getServiceAccountKey()) {
     try {
       return getAdminFirestore();
     } catch {

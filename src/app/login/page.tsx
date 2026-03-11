@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Box,
   Button,
@@ -17,12 +16,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isAdminEmail } from "@/lib/constants";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { signIn, user, loading } = useAuth();
+  const { signIn, user, loading, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (loading) {
+      const t = setTimeout(() => setLoadingTimedOut(true), 2500);
+      return () => clearTimeout(t);
+    }
+    setLoadingTimedOut(false);
+  }, [loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +37,9 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-      router.push(isAdminEmail(email) ? "/admin" : "/");
+      if (typeof window !== "undefined") {
+        window.location.href = isAdminEmail(email) ? "/admin" : "/";
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Sign in failed.";
       setError(message);
@@ -39,14 +48,7 @@ export default function LoginPage() {
     }
   };
 
-  useEffect(() => {
-    if (loading) return;
-    if (user) {
-      router.replace(isAdminEmail(user.email) ? "/admin" : "/");
-    }
-  }, [loading, user, router]);
-
-  if (loading) {
+  if (loading && !loadingTimedOut) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
         <CircularProgress />
@@ -56,9 +58,37 @@ export default function LoginPage() {
 
   if (user) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="xs" sx={{ px: 2 }}>
+        <Box sx={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", py: 3 }}>
+          <Paper elevation={2} sx={{ p: 3, width: "100%", maxWidth: 400 }}>
+            <Typography component="h1" variant="h5" align="center" gutterBottom>
+              Already signed in
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 2 }}>
+              {user.email}
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Button component={Link} href={isAdminEmail(user.email) ? "/admin" : "/"} variant="contained" fullWidth sx={{ minHeight: 44 }}>
+                Go to {isAdminEmail(user.email) ? "Dashboard" : "Home"}
+              </Button>
+              <Button
+                onClick={async () => {
+                  await signOut();
+                  if (typeof window !== "undefined") window.location.href = "/login";
+                }}
+                variant="outlined"
+                fullWidth
+                sx={{ minHeight: 44 }}
+              >
+                Sign out
+              </Button>
+            </Box>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+              <Link href="/" style={{ color: "inherit" }}>Back to home</Link>
+            </Typography>
+          </Paper>
+        </Box>
+      </Container>
     );
   }
 

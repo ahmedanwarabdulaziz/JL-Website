@@ -47,6 +47,7 @@ export default function NewPiecePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [storageKey, setStorageKey] = useState("");
   const [publicUrl, setPublicUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -100,6 +101,7 @@ export default function NewPiecePage() {
       if (!res.ok) throw new Error(data.error || "Upload failed");
       setStorageKey(data.storageKey);
       setPublicUrl(data.publicUrl);
+      setThumbnailUrl(data.thumbnailUrl ?? "");
       setActiveStep(1);
       if (!title) setTitle(file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "));
       if (!slug) setSlug(slugify(file.name.replace(/\.[^.]+$/, "")));
@@ -184,6 +186,7 @@ export default function NewPiecePage() {
         metaDescription: metaDescription.trim() || undefined,
         storageKey,
         publicUrl,
+        ...(thumbnailUrl ? { thumbnailUrl } : {}),
         tagIds: allTagIds,
         createdBy: user?.uid,
       });

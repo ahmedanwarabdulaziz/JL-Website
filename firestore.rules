@@ -10,13 +10,20 @@ service cloud.firestore {
     }
 
     match /tagCategories/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /tags/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /upholsteryPieces/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /projects/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
     match /quotationRequests/{docId} {
       allow create: if true;
