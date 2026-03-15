@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 import sharp from "sharp";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAdminFirestoreIfAvailable } from "@/lib/firebase-admin";
 import { FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { uploadToR2Quotations } from "@/lib/r2";
+import { sendQuotationEmailsInBackground } from "@/lib/quotation-email";
 
-const MAIL_FROM = process.env.MAIL_FROM ?? "jl@jlupholstery.com";
 const MAIL_APP_PASSWORD = process.env.MAIL_APP_PASSWORD;
-const MAIL_SENDER_NAME = "JL Upholstery";
-const MAIL_FROM_HEADER = `${MAIL_SENDER_NAME} <${MAIL_FROM}>`;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 const MAX_IMAGES = 7;
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 export async function POST(request: NextRequest) {
   if (!MAIL_APP_PASSWORD) {
@@ -82,17 +71,22 @@ export async function POST(request: NextRequest) {
 
     const imageFiles = allFiles.filter((f) => f.type.startsWith("image/"));
     const fileUrls: string[] = [];
+    let emailAttachments: { filename: string; content: Buffer }[] = [];
+
     if (imageFiles.length > 0) {
-      for (let i = 0; i < imageFiles.length; i++) {
-        const buffer = Buffer.from(await imageFiles[i].arrayBuffer());
+      const buffers = await Promise.all(imageFiles.map((f) => f.arrayBuffer().then((ab) => Buffer.from(ab))));
+      emailAttachments = imageFiles.map((f, i) => ({ filename: f.name || "image", content: buffers[i] }));
+
+      const processOne = async (buffer: Buffer, i: number): Promise<string> => {
         const processed = await sharp(buffer)
           .resize(800, undefined, { withoutEnlargement: true })
           .webp({ quality: 85 })
           .toBuffer();
         const key = `quotations/${quotationId}/image_${i}.webp`;
-        const url = await uploadToR2Quotations(key, processed, "image/webp");
-        fileUrls.push(url);
-      }
+        return uploadToR2Quotations(key, processed, "image/webp");
+      };
+      const urls = await Promise.all(buffers.map((b, i) => processOne(b, i)));
+      fileUrls.push(...urls);
       if (fileUrls.length > 0) {
         try {
           if (ref) {
@@ -116,49 +110,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: { user: MAIL_FROM, pass: MAIL_APP_PASSWORD },
-    });
-
-    const attachments: { filename: string; content: Buffer }[] = [];
-    for (const f of imageFiles) {
-      const buffer = Buffer.from(await f.arrayBuffer());
-      attachments.push({ filename: f.name || "image", content: buffer });
-    }
-
-    const toJL = {
-      from: MAIL_FROM_HEADER,
-      to: MAIL_FROM,
-      subject: `Quotation request from ${name}`,
-      text: `Name: ${name}\nPhone: ${phone}\nEmail: ${email}\n\nDescription:\n${description}`,
-      html: `
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Description:</strong></p>
-        <p>${escapeHtml(description).replace(/\n/g, "<br>")}</p>
-        ${attachments.length ? `<p>${attachments.length} photo(s) attached. View in admin quotations.</p>` : ""}
-      `,
-      attachments,
-    };
-
-    const toCustomer = {
-      from: MAIL_FROM_HEADER,
-      to: email,
-      subject: "We received your quotation request – JL Upholstery",
-      text: `Hi ${name},\n\nThank you for your quotation request. We have received your message and will get back to you soon.\n\nBest regards,\nJL Upholstery`,
-      html: `
-        <p>Hi ${escapeHtml(name)},</p>
-        <p>Thank you for your quotation request. We have received your message and will get back to you soon.</p>
-        <p>Best regards,<br><strong>JL Upholstery</strong></p>
-      `,
-    };
-
-    await transporter.sendMail(toJL);
-    await transporter.sendMail(toCustomer);
+    sendQuotationEmailsInBackground(name, phone, email, description, emailAttachments);
 
     return NextResponse.json({ success: true, message: "Request sent successfully." });
   } catch (err) {

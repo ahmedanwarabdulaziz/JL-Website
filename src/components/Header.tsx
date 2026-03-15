@@ -30,8 +30,9 @@ const BRAND_ORANGE = "#fe812b";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
+  { href: "/commercial", label: "Commercial" },
   { href: "/services", label: "Services" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/projects", label: "Project Explorer" },
   { href: "/fabric", label: "Fabric" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },

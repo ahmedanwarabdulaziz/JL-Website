@@ -241,8 +241,8 @@ export default function NewProjectPage() {
         uploadedStorageKeys: uploadedStorageKeys.length ? uploadedStorageKeys : undefined,
         createdBy: user?.uid,
       };
-      const id = await createProject(data);
-      router.push(`/admin/projects/${id}`);
+      await createProject(data);
+      router.push("/admin/projects");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {

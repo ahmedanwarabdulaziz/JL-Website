@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Alert,
@@ -9,7 +10,7 @@ import {
   Button,
   Card,
   CardContent,
-  CardMedia,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -139,59 +140,99 @@ export default function AdminProjectsPage() {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(1, 1fr)",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(2, 1fr)",
-            },
-            gap: 2,
+            gridTemplateColumns: "repeat(auto-fill, 180px)",
+            gap: 1.5,
+            maxWidth: 960,
           }}
         >
           {sorted.map((p) => (
-            <Card key={p.id} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden", position: "relative" }}>
-              <Stack direction="row" spacing={0.5} sx={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}>
-                <Tooltip title="Edit project">
+            <Card
+              key={p.id}
+              variant="outlined"
+              sx={{
+                width: 180,
+                borderRadius: 1.5,
+                overflow: "hidden",
+                position: "relative",
+                borderColor: "divider",
+                "&:hover": { borderColor: "action.selected", bgcolor: "action.hover" },
+                transition: "border-color 0.15s ease, background-color 0.15s ease",
+              }}
+            >
+              <Stack direction="row" spacing={0.25} sx={{ position: "absolute", top: 6, right: 6, zIndex: 1 }}>
+                <Tooltip title="Edit">
                   <IconButton
                     component={Link}
                     href={`/admin/projects/${p.id}`}
                     size="small"
-                    sx={{ bgcolor: "background.paper", boxShadow: 1, "&:hover": { bgcolor: "background.paper" } }}
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      bgcolor: "rgba(255,255,255,0.9)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                      "&:hover": { bgcolor: "#fff" },
+                    }}
                     aria-label={`Edit ${p.title}`}
                   >
-                    <EditIcon fontSize="small" />
+                    <EditIcon sx={{ fontSize: 18 }} />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Delete project">
+                <Tooltip title="Delete">
                   <IconButton
                     size="small"
                     onClick={() => setProjectToDelete(p)}
                     sx={{
-                      bgcolor: "background.paper",
-                      boxShadow: 1,
+                      width: 32,
+                      height: 32,
+                      bgcolor: "rgba(255,255,255,0.9)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
                       color: "error.main",
-                      "&:hover": { bgcolor: "background.paper" },
+                      "&:hover": { bgcolor: "#fff" },
                     }}
                     aria-label={`Delete ${p.title}`}
                   >
-                    <DeleteIcon fontSize="small" />
+                    <DeleteIcon sx={{ fontSize: 18 }} />
                   </IconButton>
                 </Tooltip>
               </Stack>
 
-              <CardMedia
-                component="img"
-                image={p.primaryImage.thumbnailUrl || p.primaryImage.publicUrl}
-                alt={p.title}
-                sx={{ aspectRatio: "4/3", objectFit: "cover", bgcolor: "action.hover" }}
-              />
-              <CardContent sx={{ py: 1.5 }}>
-                <Typography fontWeight={600} noWrap title={p.title}>
-                  {p.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap title={p.slug}>
+              <Box
+                sx={{
+                  position: "relative",
+                  width: "100%",
+                  height: 100,
+                  bgcolor: "grey.100",
+                  overflow: "hidden",
+                }}
+              >
+                <Image
+                  src={p.primaryImage.thumbnailUrl || p.primaryImage.publicUrl}
+                  alt={p.title}
+                  fill
+                  sizes="180px"
+                  style={{ objectFit: "cover" }}
+                  loading="lazy"
+                />
+              </Box>
+              <CardContent sx={{ py: 1, px: 1.25, "&:last-child": { pb: 1 } }}>
+                <Stack direction="row" alignItems="center" flexWrap="wrap" gap={0.75} sx={{ mb: 0.25 }}>
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={600}
+                    noWrap
+                    title={p.title}
+                    sx={{ flex: "1 1 auto", minWidth: 0, fontSize: "0.8125rem" }}
+                  >
+                    {p.title}
+                  </Typography>
+                  {(p.beforeImages?.length ?? 0) > 0 && (p.afterImages?.length ?? 0) > 0 && (
+                    <Chip label="Before & after" size="small" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.secondary" noWrap display="block" title={p.slug} sx={{ fontSize: "0.7rem" }}>
                   /projects/{p.slug}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
                   {p.pieceIds?.length ?? 0} piece{(p.pieceIds?.length ?? 0) !== 1 ? "s" : ""}
                 </Typography>
               </CardContent>

@@ -198,6 +198,23 @@ export default function NewPiecePage() {
     }
   };
 
+  const resetForm = () => {
+    setActiveStep(0);
+    setFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setStorageKey("");
+    setPublicUrl("");
+    setThumbnailUrl("");
+    setTitle("");
+    setSlug("");
+    setMetaDescription("");
+    setSlugError("");
+    setSelectedTagIds({});
+    setTagValidationErrors([]);
+    setError("");
+  };
+
   if (authLoading || !user || !isAdmin) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
@@ -398,7 +415,7 @@ export default function NewPiecePage() {
           <Stack spacing={2} sx={{ py: 2 }}>
             <Typography color="text.secondary">Piece saved. You can add another or go back to admin.</Typography>
             <Stack direction="row" spacing={2} flexWrap="wrap">
-              <Button component={Link} href="/admin/pieces/new" variant="contained" sx={{ minHeight: 44 }}>
+              <Button variant="contained" onClick={resetForm} sx={{ minHeight: 44 }}>
                 Add another
               </Button>
               <Button component={Link} href="/admin" variant="outlined" sx={{ minHeight: 44 }}>

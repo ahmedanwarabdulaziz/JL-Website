@@ -13,9 +13,12 @@ import {
   Stack,
   Paper,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag, UpholsteryPiece } from "@/lib/firestore";
 import {
@@ -26,6 +29,8 @@ import {
   slugify,
   updateUpholsteryPiece,
   deleteUpholsteryPiece,
+  toggleTagFeaturedImage,
+  type StoredImage,
 } from "@/lib/firestore";
 
 export default function EditPiecePage() {
@@ -40,6 +45,7 @@ export default function EditPiecePage() {
   const [error, setError] = useState("");
   const [slugError, setSlugError] = useState("");
   const [tagValidationErrors, setTagValidationErrors] = useState<string[]>([]);
+  const [togglingStarFor, setTogglingStarFor] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -107,6 +113,34 @@ export default function EditPiecePage() {
       if (selected) return { ...prev, [categoryId]: [...current, tagId] };
       return { ...prev, [categoryId]: current.filter((x) => x !== tagId) };
     });
+  };
+
+  const handleToggleFeatured = async (tagId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!piece) return;
+    
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return;
+    
+    const isCurrentlyFeatured = tag.featuredImages?.some(img => img.storageKey === piece.storageKey) || false;
+    
+    setTogglingStarFor(tagId);
+    try {
+      const imgObj: StoredImage = {
+        storageKey: piece.storageKey,
+        publicUrl: piece.publicUrl,
+        thumbnailUrl: piece.thumbnailUrl
+      };
+      await toggleTagFeaturedImage(tagId, imgObj, !isCurrentlyFeatured);
+      
+      // Refresh tags list to update UI
+      const updatedTags = await getTags();
+      setTags(updatedTags);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update featured images");
+    } finally {
+      setTogglingStarFor(null);
+    }
   };
 
   const validateTags = (): boolean => {
@@ -275,6 +309,8 @@ export default function EditPiecePage() {
                 <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
                   {catTags.map((t) => {
                     const isSelected = selected.includes(t.id);
+                    const isFeatured = t.featuredImages?.some(img => img.storageKey === piece?.storageKey);
+                    
                     return (
                       <Chip
                         key={t.id}
@@ -282,7 +318,19 @@ export default function EditPiecePage() {
                         onClick={() => handleTagChange(category.id, t.id, !isSelected, category.selection)}
                         variant={isSelected ? "filled" : "outlined"}
                         color={isSelected ? "primary" : "default"}
-                        sx={{ cursor: "pointer", fontWeight: 500 }}
+                        onDelete={isSelected ? (e) => handleToggleFeatured(t.id, e as any) : undefined}
+                        deleteIcon={
+                          isSelected ? (
+                            togglingStarFor === t.id ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : isFeatured ? (
+                              <Tooltip title="Remove from Featured Images"><StarIcon sx={{ color: "#ffd700 !important", fontSize: 20 }} /></Tooltip>
+                            ) : (
+                              <Tooltip title="Set as Featured Image for this Tag"><StarBorderIcon sx={{ fontSize: 20 }} /></Tooltip>
+                            )
+                          ) : undefined
+                        }
+                        sx={{ cursor: "pointer", fontWeight: 500, "& .MuiChip-deleteIcon": { opacity: 1 } }}
                       />
                     );
                   })}

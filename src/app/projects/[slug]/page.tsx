@@ -71,7 +71,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       <Paper
                         key={id}
                         component={Link}
-                        href={`/gallery/${p.slug}`}
+                        href={`/projects/piece/${p.slug}`}
                         variant="outlined"
                         sx={{
                           borderRadius: 2,

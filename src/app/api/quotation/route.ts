@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addDoc, collection, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { sendQuotationEmailsInBackground } from "@/lib/quotation-email";
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
 
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     const email = (formData.get("email") as string)?.trim() ?? "";
     const description = (formData.get("description") as string)?.trim() ?? "";
     const recaptchaToken = (formData.get("recaptchaToken") as string)?.trim() ?? "";
+    const noFiles = formData.get("noFiles") === "true";
 
     const errors: string[] = [];
     if (!name || name.length < 2) errors.push("Name must be at least 2 characters.");
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest) {
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      if (noFiles) sendQuotationEmailsInBackground(name.trim(), phone.trim(), email.trim(), description.trim());
       return NextResponse.json({ success: true, quotationId: ref.id });
     } catch (_) {
       const ref = await addDoc(collection(db, "quotationRequests"), {
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      if (noFiles) sendQuotationEmailsInBackground(name.trim(), phone.trim(), email.trim(), description.trim());
       return NextResponse.json({ success: true, quotationId: ref.id });
     }
   } catch (err) {

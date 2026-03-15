@@ -94,6 +94,7 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
       formData.set("email", email.trim());
       formData.set("description", description.trim());
       if (recaptchaToken) formData.set("recaptchaToken", recaptchaToken);
+      if (files.length === 0) formData.set("noFiles", "true");
 
       const res = await fetch("/api/quotation", { method: "POST", body: formData });
       const data = (await res.json()) as { success?: boolean; quotationId?: string; error?: string };
@@ -113,19 +114,6 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
 
       const totalFiles = files.length;
       if (totalFiles === 0) {
-        const uploadForm = new FormData();
-        uploadForm.set("quotationId", quotationId);
-        uploadForm.set("name", name.trim());
-        uploadForm.set("phone", phone.trim());
-        uploadForm.set("email", email.trim());
-        uploadForm.set("description", description.trim());
-        const uploadRes = await fetch("/api/quotation/upload", { method: "POST", body: uploadForm });
-        const uploadData = (await uploadRes.json()) as { success?: boolean; error?: string };
-        if (!uploadRes.ok) {
-          setSubmitError(uploadData.error ?? "Failed to complete. Please try again.");
-          setSubmitPhase("idle");
-          return;
-        }
         setSubmitPhase("done");
         setSuccess(true);
         setTimeout(() => handleClose(), 2500);
@@ -262,10 +250,10 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
               <>
                 <CircularProgress size={40} sx={{ color: BRAND_ORANGE, mb: 2 }} />
                 <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  Saving your request...
+                  Sending your request...
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  One moment please.
+                  One moment.
                 </Typography>
               </>
             ) : (

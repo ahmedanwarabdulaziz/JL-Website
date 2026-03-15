@@ -28,7 +28,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useAuth } from "@/contexts/AuthContext";
-import type { TagCategory, Tag } from "@/lib/firestore";
+import type { TagCategory, Tag, StoredImage } from "@/lib/firestore";
 import {
   getTagCategories,
   getTags,
@@ -65,6 +65,8 @@ export default function AdminTagsPage() {
   const [editTagId, setEditTagId] = useState<string | null>(null);
   const [editTagLabel, setEditTagLabel] = useState("");
   const [editTagCategoryId, setEditTagCategoryId] = useState("");
+  const [editTagFeaturedImages, setEditTagFeaturedImages] = useState<StoredImage[]>([]);
+  const [uploadingTagImage, setUploadingTagImage] = useState(false);
 
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
   const [deleteTagId, setDeleteTagId] = useState<string | null>(null);
@@ -125,18 +127,57 @@ export default function AdminTagsPage() {
     setEditTagId(t.id);
     setEditTagLabel(t.label);
     setEditTagCategoryId(t.categoryId);
+    setEditTagFeaturedImages(t.featuredImages || []);
   };
 
   const handleSaveEditTag = async () => {
     if (!editTagId || !editTagLabel.trim() || !editTagCategoryId) return;
     setSaving(true);
     try {
-      await updateTag(editTagId, { label: editTagLabel.trim(), categoryId: editTagCategoryId });
+      await updateTag(editTagId, { 
+        label: editTagLabel.trim(), 
+        categoryId: editTagCategoryId,
+        featuredImages: editTagFeaturedImages
+      });
       await loadData();
       setEditTagId(null);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleTagImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (editTagFeaturedImages.length >= 5) {
+      alert("Maximum 5 featured images allowed per tag.");
+      return;
+    }
+    setUploadingTagImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      
+      const newImage: StoredImage = {
+        storageKey: data.storageKey,
+        publicUrl: data.publicUrl,
+        thumbnailUrl: data.thumbnailUrl,
+      };
+      setEditTagFeaturedImages(prev => [...prev, newImage]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingTagImage(false);
+      // Reset the file input so the same file could be selected again if needed
+      e.target.value = "";
+    }
+  };
+
+  const removeTagImage = (index: number) => {
+    setEditTagFeaturedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteCategory = async () => {
@@ -472,6 +513,45 @@ export default function AdminTagsPage() {
               fullWidth
               slotProps={{ input: { style: { minHeight: 44 } } }}
             />
+            {/* Featured Images Uploader */}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Featured Images (Optional, max 5)
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 1.5 }}>
+                {editTagFeaturedImages.map((img, i) => (
+                  <Box key={i} sx={{ position: "relative", width: 80, height: 80, borderRadius: 1, overflow: "hidden", border: "1px solid #ddd" }}>
+                    <Box component="img" src={img.thumbnailUrl || img.publicUrl} sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => removeTagImage(i)}
+                      sx={{ position: "absolute", top: 2, right: 2, bgcolor: "rgba(255,255,255,0.8)", "&:hover": { bgcolor: "white" } }}
+                    >
+                      <DeleteIcon fontSize="inherit" />
+                    </IconButton>
+                  </Box>
+                ))}
+                {editTagFeaturedImages.length < 5 && (
+                  <Button
+                    component="label"
+                    variant="outlined"
+                    sx={{ width: 80, height: 80, flexDirection: "column", gap: 0.5 }}
+                    disabled={uploadingTagImage}
+                  >
+                    {uploadingTagImage ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      <>
+                        <AddCircleOutlineIcon color="action" />
+                        <Typography variant="caption" color="text.secondary">Add</Typography>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" hidden onChange={handleTagImageUpload} />
+                  </Button>
+                )}
+              </Stack>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 2, pb: 2 }}>

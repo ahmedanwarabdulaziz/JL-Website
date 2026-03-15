@@ -36,6 +36,8 @@ export interface Tag {
   id: string;
   categoryId: string;
   label: string;
+  /** Up to 5 images showcasing this tag (e.g. for Styles). */
+  featuredImages?: StoredImage[];
 }
 
 export interface UpholsteryPiece {
@@ -141,6 +143,36 @@ export async function createTag(data: Omit<Tag, "id">): Promise<string> {
 
 export async function updateTag(id: string, data: Partial<Omit<Tag, "id">>): Promise<void> {
   await setDoc(doc(db, TAGS, id), data, { merge: true });
+}
+
+export async function toggleTagFeaturedImage(
+  tagId: string,
+  image: StoredImage,
+  isFeatured: boolean
+): Promise<void> {
+  const tagRef = doc(db, TAGS, tagId);
+  const tagSnap = await getDoc(tagRef);
+  
+  if (!tagSnap.exists()) {
+    throw new Error("Tag not found");
+  }
+  
+  const tagData = tagSnap.data() as Omit<Tag, "id">;
+  let currentImages = tagData.featuredImages || [];
+  
+  if (isFeatured) {
+    if (currentImages.length >= 5) {
+      throw new Error("Maximum 5 featured images allowed per tag.");
+    }
+    // Prevent duplicates
+    if (!currentImages.some(img => img.storageKey === image.storageKey)) {
+      currentImages.push(image);
+    }
+  } else {
+    currentImages = currentImages.filter(img => img.storageKey !== image.storageKey);
+  }
+  
+  await updateTag(tagId, { featuredImages: currentImages });
 }
 
 export async function deleteTag(id: string): Promise<void> {
