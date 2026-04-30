@@ -78,7 +78,9 @@ export async function POST(request: NextRequest) {
       }),
     };
 
-    // Save to Firestore
+    // ── CRITICAL PATH: Save to Firestore ──
+    // If THIS succeeds, the quotation is SAVED. Customer data is NEVER lost.
+    // It will always appear in /admin/quotations regardless of email status.
     try {
       const adminDb = getAdminFirestore();
       await adminDb.collection("quotationRequests").add({
@@ -94,12 +96,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Send email — must await because Vercel terminates the function after response.
-    // This is fast now (no heavy attachments, just text + image URLs).
-    await sendQuotationEmails(name, phone, email, description, imageUrls);
+    // ── BEST-EFFORT: Send email notifications ──
+    // Quotation is already saved above. If email fails, we still return success.
+    // You'll still see the quotation in /admin/quotations.
+    try {
+      await sendQuotationEmails(name, phone, email, description, imageUrls);
+    } catch (emailErr) {
+      // Log but do NOT fail the request — the quotation is already safely saved.
+      console.error("Email send failed (quotation already saved in Firestore):", emailErr);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    // This only triggers if FIRESTORE save itself fails (very rare).
     console.error("Quotation API error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to save your request. Please try again." },
