@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       email,
       description,
       status: "new" as const,
+      emailSent: false, // Track email delivery status
       ...(imageUrls.length > 0 && {
         fileUrl: imageUrls[0],
         fileUrls: imageUrls,
@@ -80,33 +81,53 @@ export async function POST(request: NextRequest) {
 
     // ── CRITICAL PATH: Save to Firestore ──
     // If THIS succeeds, the quotation is SAVED. Customer data is NEVER lost.
-    // It will always appear in /admin/quotations regardless of email status.
+    let docId = "";
+    let useAdmin = false;
     try {
       const adminDb = getAdminFirestore();
-      await adminDb.collection("quotationRequests").add({
+      const ref = await adminDb.collection("quotationRequests").add({
         ...baseData,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      docId = ref.id;
+      useAdmin = true;
     } catch (_) {
-      await addDoc(collection(db, "quotationRequests"), {
+      const ref = await addDoc(collection(db, "quotationRequests"), {
         ...baseData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      docId = ref.id;
     }
 
-    // ── BEST-EFFORT: Send email notifications ──
-    // Quotation is already saved above. If email fails, we still return success.
-    // You'll still see the quotation in /admin/quotations.
+    // ── EMAIL: Retry up to 3 times with 1s delay ──
+    let emailSent = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (attempt > 1) await new Promise((r) => setTimeout(r, 1000));
+        await sendQuotationEmails(name, phone, email, description, imageUrls);
+        emailSent = true;
+        break;
+      } catch (emailErr) {
+        console.error(`Email attempt ${attempt}/3 failed:`, emailErr);
+      }
+    }
+
+    // Update Firestore with email delivery status
     try {
-      await sendQuotationEmails(name, phone, email, description, imageUrls);
-    } catch (emailErr) {
-      // Log but do NOT fail the request — the quotation is already safely saved.
-      console.error("Email send failed (quotation already saved in Firestore):", emailErr);
+      if (useAdmin) {
+        const adminDb = getAdminFirestore();
+        await adminDb.collection("quotationRequests").doc(docId).update({
+          emailSent,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } catch {
+      // Non-critical — quotation is already saved
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, emailSent });
   } catch (err) {
     // This only triggers if FIRESTORE save itself fails (very rare).
     console.error("Quotation API error:", err);

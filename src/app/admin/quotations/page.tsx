@@ -20,10 +20,13 @@ import {
   DialogContent,
   IconButton,
   Chip,
+  Button,
 } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
 import ChevronRight from "@mui/icons-material/ChevronRight";
+import EmailIcon from "@mui/icons-material/Email";
+import ReplayIcon from "@mui/icons-material/Replay";
 import type { QuotationRequest, QuotationRequestStatus } from "@/lib/firestore";
 import { getQuotationRequests, updateQuotationRequest } from "@/lib/firestore";
 
@@ -46,6 +49,7 @@ export default function AdminQuotationsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +80,29 @@ export default function AdminQuotationsPage() {
       setError(err instanceof Error ? err.message : "Failed to update status.");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleResendEmail = async (id: string) => {
+    setResendingId(id);
+    try {
+      const res = await fetch("/api/quotation/resend-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quotationId: id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRequests((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, emailSent: true } : r))
+        );
+      } else {
+        setError(data.error ?? "Failed to resend email.");
+      }
+    } catch {
+      setError("Network error. Could not resend email.");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -163,12 +190,17 @@ export default function AdminQuotationsPage() {
                       <Typography variant="caption" color="text.secondary">
                         {formatDate(r.createdAt)}
                       </Typography>
-                      <Chip size="small" label={r.status} sx={{ textTransform: "capitalize" }} />
+                      <Box sx={{ display: "flex", gap: 0.5 }}>
+                        <Chip size="small" label={r.status} sx={{ textTransform: "capitalize" }} />
+                        {(r as any).emailSent === false && (
+                          <Chip size="small" label="Email failed" color="error" variant="outlined" />
+                        )}
+                      </Box>
                     </Box>
                   </CardContent>
                 </CardActionArea>
-                <Box sx={{ px: 2, pb: 2, pt: 0 }}>
-                  <FormControl size="small" fullWidth disabled={updatingId === r.id}>
+                <Box sx={{ px: 2, pb: 2, pt: 0, display: "flex", gap: 1 }}>
+                  <FormControl size="small" sx={{ flex: 1 }} disabled={updatingId === r.id}>
                     <InputLabel>Status</InputLabel>
                     <Select
                       value={r.status}
@@ -181,6 +213,19 @@ export default function AdminQuotationsPage() {
                       <MenuItem value="closed">Closed</MenuItem>
                     </Select>
                   </FormControl>
+                  {(r as any).emailSent === false && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      startIcon={resendingId === r.id ? <CircularProgress size={14} /> : <ReplayIcon />}
+                      disabled={resendingId === r.id}
+                      onClick={(e) => { e.stopPropagation(); handleResendEmail(r.id); }}
+                      sx={{ minWidth: 100, textTransform: "none" }}
+                    >
+                      Resend
+                    </Button>
+                  )}
                 </Box>
               </Card>
             );
@@ -212,6 +257,27 @@ export default function AdminQuotationsPage() {
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">Description</Typography>
                 <Typography>{selected.description || "—"}</Typography>
+              </Box>
+              <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">Email status:</Typography>
+                {(selected as any).emailSent === false ? (
+                  <>
+                    <Chip size="small" label="Not sent" color="error" icon={<EmailIcon />} />
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="warning"
+                      startIcon={resendingId === selected.id ? <CircularProgress size={14} /> : <ReplayIcon />}
+                      disabled={resendingId === selected.id}
+                      onClick={() => handleResendEmail(selected.id)}
+                      sx={{ textTransform: "none" }}
+                    >
+                      Resend Email
+                    </Button>
+                  </>
+                ) : (
+                  <Chip size="small" label="Sent" color="success" icon={<EmailIcon />} />
+                )}
               </Box>
               {imageUrls.length > 0 && (
                 <Box sx={{ mt: 3 }}>
