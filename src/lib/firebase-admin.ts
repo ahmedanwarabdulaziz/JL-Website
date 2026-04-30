@@ -77,3 +77,15 @@ export async function createQuotationRequest(data: QuotationRequestData): Promis
   });
   return ref.id;
 }
+
+export async function getAdminQuotationRequestById(id: string): Promise<QuotationRequestData | null> {
+  const db = getAdminFirestore();
+  const snap = await db.collection(QUOTATION_REQUESTS).doc(id).get();
+  if (!snap.exists) return null;
+  return snap.data() as QuotationRequestData;
+}
+
+export async function deleteAdminQuotationRequest(id: string): Promise<void> {
+  const db = getAdminFirestore();
+  await db.collection(QUOTATION_REQUESTS).doc(id).delete();
+}

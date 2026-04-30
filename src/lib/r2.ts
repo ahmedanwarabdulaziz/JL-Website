@@ -117,3 +117,14 @@ export async function deleteFromR2(key: string): Promise<void> {
     })
   );
 }
+
+export async function deleteFromR2Quotations(key: string): Promise<void> {
+  if (!r2Client) throw new Error("R2 is not configured");
+  const bucket = R2_QUOTATIONS_BUCKET ?? R2_BUCKET;
+  await r2Client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    })
+  );
+}

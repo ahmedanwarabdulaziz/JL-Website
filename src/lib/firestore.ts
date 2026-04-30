@@ -334,6 +334,12 @@ export async function getQuotationRequests(): Promise<QuotationRequest[]> {
   return snap.docs.map((d) => fromDoc<QuotationRequest>(d));
 }
 
+export async function getQuotationRequestById(id: string): Promise<QuotationRequest | null> {
+  const snap = await getDoc(doc(db, QUOTATION_REQUESTS, id));
+  if (!snap.exists()) return null;
+  return fromDoc<QuotationRequest>({ id: snap.id, data: () => snap.data() });
+}
+
 export async function updateQuotationRequest(
   id: string,
   data: Partial<Pick<QuotationRequest, "status">>
@@ -343,4 +349,8 @@ export async function updateQuotationRequest(
     { ...data, updatedAt: serverTimestamp() },
     { merge: true }
   );
+}
+
+export async function deleteQuotationRequest(id: string): Promise<void> {
+  await deleteDoc(doc(db, QUOTATION_REQUESTS, id));
 }

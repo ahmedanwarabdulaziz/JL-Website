@@ -231,7 +231,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           display: "flex",
           flexDirection: "column",
           alignItems: "stretch",
-          maxWidth: MAIN_MAX_WIDTH,
           px: { xs: 2, sm: 3 },
           pt: { xs: "calc(56px + env(safe-area-inset-top))", md: 3 },
           pb: { xs: 3, md: 4 },

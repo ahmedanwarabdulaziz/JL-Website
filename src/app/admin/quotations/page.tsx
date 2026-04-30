@@ -11,24 +11,33 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Card,
-  CardMedia,
-  CardContent,
-  CardActionArea,
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
+  DialogContentText,
   IconButton,
   Chip,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Avatar,
+  Tooltip,
 } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
 import ChevronLeft from "@mui/icons-material/ChevronLeft";
 import ChevronRight from "@mui/icons-material/ChevronRight";
 import EmailIcon from "@mui/icons-material/Email";
 import ReplayIcon from "@mui/icons-material/Replay";
+import DeleteIcon from "@mui/icons-material/Delete";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
 import type { QuotationRequest, QuotationRequestStatus } from "@/lib/firestore";
-import { getQuotationRequests, updateQuotationRequest } from "@/lib/firestore";
+import { getQuotationRequests, updateQuotationRequest, deleteQuotationRequest } from "@/lib/firestore";
 
 function formatDate(ts: { toDate?: () => Date } | null): string {
   if (!ts || typeof (ts as { toDate?: () => Date }).toDate !== "function") return "—";
@@ -42,6 +51,12 @@ function getImageUrls(r: QuotationRequest): string[] {
   return [];
 }
 
+const statusColor: Record<string, "default" | "primary" | "success" | "warning" | "error"> = {
+  new: "primary",
+  replied: "success",
+  closed: "default",
+};
+
 export default function AdminQuotationsPage() {
   const [requests, setRequests] = useState<QuotationRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +65,8 @@ export default function AdminQuotationsPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +123,38 @@ export default function AdminQuotationsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const selectedRequest = requests.find((r) => r.id === deleteId);
+      const urls = selectedRequest ? getImageUrls(selectedRequest) : [];
+
+      if (urls.length > 0) {
+        const res = await fetch("/api/quotation/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          console.error("Failed to delete images from cloud:", data.error);
+          // Proceed to delete the document anyway so it doesn't get stuck
+        }
+      }
+
+      await deleteQuotationRequest(deleteId);
+      
+      setRequests((prev) => prev.filter((r) => r.id !== deleteId));
+      setDeleteId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete quotation.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const selected = openId ? requests.find((r) => r.id === openId) : null;
   const imageUrls = selected ? getImageUrls(selected) : [];
   const currentImage = imageUrls[lightboxIndex] ?? null;
@@ -129,7 +178,7 @@ export default function AdminQuotationsPage() {
         Quotations
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        View and manage quotation requests. Click a card to open details and images.
+        View and manage quotation requests. Click a row to open details and images.
       </Typography>
 
       {error && (
@@ -145,92 +194,140 @@ export default function AdminQuotationsPage() {
           </Typography>
         </Paper>
       ) : (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: 2,
-          }}
-        >
-          {requests.map((r) => {
-            const urls = getImageUrls(r);
-            const thumb = urls[0];
-            return (
-              <Card key={r.id} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
-                <CardActionArea onClick={() => openDetail(r.id)}>
-                  {thumb ? (
-                    <CardMedia
-                      component="img"
-                      image={thumb}
-                      referrerPolicy="no-referrer"
-                      sx={{ height: 160, bgcolor: "action.hover", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <CardMedia
-                      component="div"
-                      sx={{ height: 160, bgcolor: "action.hover", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <ImageIcon sx={{ fontSize: 56, color: "action.disabled" }} />
-                    </CardMedia>
-                  )}
-                  <CardContent sx={{ "&:last-child": { pb: 2 } }}>
-                    <Typography variant="subtitle1" fontWeight={600} noWrap>
-                      {r.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {r.email}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {r.phone}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }} noWrap title={r.description}>
-                      {r.description || "—"}
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1.5, flexWrap: "wrap", gap: 0.5 }}>
-                      <Typography variant="caption" color="text.secondary">
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflowX: "auto" }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: "action.hover" }}>
+                <TableCell sx={{ fontWeight: 700, width: 56 }}></TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Contact</TableCell>
+                <TableCell sx={{ fontWeight: 700, maxWidth: 200 }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 700, minWidth: 140 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {requests.map((r) => {
+                const urls = getImageUrls(r);
+                const thumb = urls[0];
+                return (
+                  <TableRow
+                    key={r.id}
+                    hover
+                    onClick={() => openDetail(r.id)}
+                    sx={{ cursor: "pointer", "&:last-child td": { borderBottom: 0 } }}
+                  >
+                    {/* Thumbnail */}
+                    <TableCell sx={{ pr: 0 }}>
+                      {thumb ? (
+                        <Avatar
+                          variant="rounded"
+                          src={thumb}
+                          imgProps={{ referrerPolicy: "no-referrer" }}
+                          sx={{ width: 40, height: 40 }}
+                        />
+                      ) : (
+                        <Avatar variant="rounded" sx={{ width: 40, height: 40, bgcolor: "action.hover" }}>
+                          <ImageIcon sx={{ color: "action.disabled", fontSize: 22 }} />
+                        </Avatar>
+                      )}
+                    </TableCell>
+
+                    {/* Contact Info */}
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600} noWrap>
+                        {r.name}
+                      </Typography>
+                      {r.email && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {r.email}
+                          </Typography>
+                          {(r as any).emailSent === false ? (
+                            <Tooltip title="Email failed to send">
+                              <ErrorIcon color="error" sx={{ fontSize: 14 }} />
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title="Email sent successfully">
+                              <CheckCircleIcon color="success" sx={{ fontSize: 14 }} />
+                            </Tooltip>
+                          )}
+                        </Box>
+                      )}
+                      {r.phone && (
+                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                          {r.phone}
+                        </Typography>
+                      )}
+                    </TableCell>
+
+                    {/* Description */}
+                    <TableCell sx={{ maxWidth: 200 }}>
+                      <Tooltip title={r.description || "—"} arrow placement="top">
+                        <Typography variant="body2" noWrap>
+                          {r.description || "—"}
+                        </Typography>
+                      </Tooltip>
+                    </TableCell>
+
+                    {/* Date */}
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary" noWrap>
                         {formatDate(r.createdAt)}
                       </Typography>
-                      <Box sx={{ display: "flex", gap: 0.5 }}>
-                        <Chip size="small" label={r.status} sx={{ textTransform: "capitalize" }} />
+                    </TableCell>
+
+
+
+                    {/* Status chip */}
+                    <TableCell>
+                      <FormControl size="small" sx={{ minWidth: 100 }} disabled={updatingId === r.id}>
+                        <Select
+                          value={r.status}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => handleStatusChange(e, r.id)}
+                          sx={{ fontSize: "0.8125rem", ".MuiSelect-select": { py: 0.75 } }}
+                        >
+                          <MenuItem value="new">New</MenuItem>
+                          <MenuItem value="replied">Replied</MenuItem>
+                          <MenuItem value="closed">Closed</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                         {(r as any).emailSent === false && (
-                          <Chip size="small" label="Email failed" color="error" variant="outlined" />
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="warning"
+                            startIcon={resendingId === r.id ? <CircularProgress size={14} /> : <ReplayIcon />}
+                            disabled={resendingId === r.id}
+                            onClick={(e) => { e.stopPropagation(); handleResendEmail(r.id); }}
+                            sx={{ textTransform: "none", whiteSpace: "nowrap" }}
+                          >
+                            Resend
+                          </Button>
                         )}
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(r.id); }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
-                    </Box>
-                  </CardContent>
-                </CardActionArea>
-                <Box sx={{ px: 2, pb: 2, pt: 0, display: "flex", gap: 1 }}>
-                  <FormControl size="small" sx={{ flex: 1 }} disabled={updatingId === r.id}>
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                      value={r.status}
-                      label="Status"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => handleStatusChange(e, r.id)}
-                    >
-                      <MenuItem value="new">New</MenuItem>
-                      <MenuItem value="replied">Replied</MenuItem>
-                      <MenuItem value="closed">Closed</MenuItem>
-                    </Select>
-                  </FormControl>
-                  {(r as any).emailSent === false && (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="warning"
-                      startIcon={resendingId === r.id ? <CircularProgress size={14} /> : <ReplayIcon />}
-                      disabled={resendingId === r.id}
-                      onClick={(e) => { e.stopPropagation(); handleResendEmail(r.id); }}
-                      sx={{ minWidth: 100, textTransform: "none" }}
-                    >
-                      Resend
-                    </Button>
-                  )}
-                </Box>
-              </Card>
-            );
-          })}
-        </Box>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <Dialog
@@ -312,6 +409,35 @@ export default function AdminQuotationsPage() {
           </>
         )}
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!deleteId}
+        onClose={() => !deleting && setDeleteId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>Delete Quotation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this quotation? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteId(null)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDelete}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
+
