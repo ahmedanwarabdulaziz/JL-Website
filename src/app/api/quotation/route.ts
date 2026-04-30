@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
       email,
       description,
       status: "new" as const,
-      emailSent: false, // Track email delivery status
       ...(imageUrls.length > 0 && {
         fileUrl: imageUrls[0],
         fileUrls: imageUrls,
