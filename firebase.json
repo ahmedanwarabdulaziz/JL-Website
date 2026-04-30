@@ -1,0 +1,6 @@
+{
+  "projectId": "jl-website-29804",
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

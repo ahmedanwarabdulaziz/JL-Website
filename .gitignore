@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# env (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+firebase-service-account.json
+**/firebase-service-account*.json
+*-firebase-adminsdk-*.json
+
+# next
+.next
+out
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+.yarn-integrity
+
+# types
+next-env.d.ts
