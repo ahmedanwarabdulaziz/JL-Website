@@ -94,10 +94,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Send email (best-effort — don't let email failure block the response)
-    sendQuotationEmails(name, phone, email, description, imageUrls).catch((err) => {
-      console.error("Email send failed (non-blocking):", err);
-    });
+    // Send email — must await because Vercel terminates the function after response.
+    // This is fast now (no heavy attachments, just text + image URLs).
+    await sendQuotationEmails(name, phone, email, description, imageUrls);
 
     return NextResponse.json({ success: true });
   } catch (err) {
