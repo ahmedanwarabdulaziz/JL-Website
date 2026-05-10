@@ -26,6 +26,7 @@ import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import WorkspacesIcon from "@mui/icons-material/Workspaces";
 import HomeIcon from "@mui/icons-material/Home";
 import LogoutIcon from "@mui/icons-material/Logout";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SIDEBAR_WIDTH_MOBILE = 280;
@@ -41,7 +42,7 @@ const navItems = [
   { href: "/admin/pieces/new", label: "Add piece", icon: <AddPhotoAlternateIcon /> },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const pathname = usePathname();
@@ -240,5 +241,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {children}
       </Box>
     </Box>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AuthProvider>
   );
 }

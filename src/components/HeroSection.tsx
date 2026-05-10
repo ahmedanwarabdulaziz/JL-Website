@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Button, Container, Typography, Box, Stack } from "@mui/material";
+import { Button, Container, Typography, Box, Stack, useMediaQuery, useTheme } from "@mui/material";
 import { useQuotationModal } from "@/contexts/QuotationModalContext";
 
 // Placeholder images for the split screen effect
@@ -11,19 +11,22 @@ const AFTER_IMAGE = "/images/new.jpeg";
 
 export default function HeroSection() {
   const { openQuotationModal } = useQuotationModal();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMove = useCallback(
     (clientX: number) => {
+      if (isMobile) return;
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const percentage = (x / rect.width) * 100;
       setSliderPosition(percentage);
     },
-    []
+    [isMobile]
   );
 
   const onMouseMove = useCallback(
@@ -77,15 +80,17 @@ export default function HeroSection() {
         sx={{
           position: "absolute",
           inset: 0,
-          cursor: isDragging ? "grabbing" : "grab",
+          cursor: isMobile ? "default" : isDragging ? "grabbing" : "grab",
           userSelect: "none",
-          touchAction: "none", // Prevent scrolling while dragging on mobile
+          touchAction: isMobile ? "auto" : "none",
         }}
         onMouseDown={(e) => {
+          if (isMobile) return;
           setIsDragging(true);
           handleMove(e.clientX);
         }}
         onTouchStart={(e) => {
+          if (isMobile) return;
           setIsDragging(true);
           handleMove(e.touches[0].clientX);
         }}
@@ -97,72 +102,76 @@ export default function HeroSection() {
             inset: 0,
             backgroundImage: `url('${AFTER_IMAGE}')`,
             backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundPosition: { xs: "58% center", md: "center" },
           }}
         />
 
         {/* BEFORE Image (Top layer, clipped) */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url('${BEFORE_IMAGE}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
-          }}
-        />
-
-        {/* Drag Handle & Line */}
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: `${sliderPosition}%`,
-            width: 2,
-            bgcolor: "#faf9f6",
-            transform: "translateX(-50%)",
-            zIndex: 2,
-            pointerEvents: "none",
-            boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-          }}
-        >
-          {/* Handle Circle */}
+        {!isMobile ? (
           <Box
             sx={{
               position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              bgcolor: "var(--brand-orange)",
-              border: "3px solid #fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-              "&::before, &::after": {
-                content: '""',
-                width: 0,
-                height: 0,
-                borderStyle: "solid",
-              },
-              "&::before": {
-                borderWidth: "6px 8px 6px 0",
-                borderColor: "transparent #fff transparent transparent",
-                marginRight: "4px",
-              },
-              "&::after": {
-                borderWidth: "6px 0 6px 8px",
-                borderColor: "transparent transparent transparent #fff",
-                marginLeft: "4px",
-              },
+              inset: 0,
+              backgroundImage: `url('${BEFORE_IMAGE}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
             }}
           />
-        </Box>
+        ) : null}
+
+        {/* Drag Handle & Line */}
+        {!isMobile ? (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: `${sliderPosition}%`,
+              width: 2,
+              bgcolor: "#faf9f6",
+              transform: "translateX(-50%)",
+              zIndex: 2,
+              pointerEvents: "none",
+              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+            }}
+          >
+            {/* Handle Circle */}
+            <Box
+              sx={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                bgcolor: "var(--brand-orange)",
+                border: "3px solid #fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                "&::before, &::after": {
+                  content: '""',
+                  width: 0,
+                  height: 0,
+                  borderStyle: "solid",
+                },
+                "&::before": {
+                  borderWidth: "6px 8px 6px 0",
+                  borderColor: "transparent #fff transparent transparent",
+                  marginRight: "4px",
+                },
+                "&::after": {
+                  borderWidth: "6px 0 6px 8px",
+                  borderColor: "transparent transparent transparent #fff",
+                  marginLeft: "4px",
+                },
+              }}
+            />
+          </Box>
+        ) : null}
       </Box>
 
       {/* Dark Overlay for Text Readability - slightly stronger at bottom left */}
@@ -170,18 +179,10 @@ export default function HeroSection() {
         sx={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.2) 100%)",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-      {/* Mobile-specific overlay gradient (bottom up) */}
-      <Box
-        sx={{
-          display: { xs: "block", md: "none" },
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%)",
+          background: {
+            xs: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 42%, rgba(0,0,0,0.12) 100%)",
+            md: "linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.2) 100%)",
+          },
           pointerEvents: "none",
           zIndex: 1,
         }}
@@ -193,7 +194,7 @@ export default function HeroSection() {
         sx={{
           position: "relative",
           zIndex: 3,
-          pointerEvents: "none", // Allow dragging through the container empty space
+          pointerEvents: isMobile ? "auto" : "none",
           textAlign: { xs: "center", md: "left" },
           py: { xs: 8, md: 0 },
           display: "flex",
@@ -206,12 +207,14 @@ export default function HeroSection() {
           spacing={{ xs: 3, md: 4 }} 
           sx={{ 
             maxWidth: { xs: "100%", md: 680 },
-            pointerEvents: "none", // Let touch events pass through to the slider
+            pointerEvents: isMobile ? "auto" : "none",
             mt: { xs: "auto", md: 0 }, // Push to bottom on mobile
+            pb: { xs: 2, md: 0 },
           }}
         >
           {/* Labels for Before/After */}
           <Stack 
+            display={{ xs: "none", md: "flex" }}
             direction="row" 
             justifyContent={{ xs: "space-between", md: "flex-start" }} 
             spacing={{ xs: 0, md: 4 }}
@@ -229,7 +232,7 @@ export default function HeroSection() {
               fontWeight: 600,
               color: "#fff",
               fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4.5rem" },
-              lineHeight: 1.1,
+              lineHeight: { xs: 1.05, md: 1.1 },
               letterSpacing: "0.01em",
               textShadow: "0 2px 24px rgba(0,0,0,0.6)",
             }}

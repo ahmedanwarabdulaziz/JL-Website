@@ -264,7 +264,7 @@ export default function FabricPage() {
         </Container>
       </Box>
 
-      {/* Fabric Care CTA/Suppliers Section */}
+      {/* Fabric Maintenance CTA/Suppliers Section */}
       <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: "#faf9f6" }}>
         <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={6} alignItems="center">
@@ -279,7 +279,7 @@ export default function FabricPage() {
                   mb: 3,
                 }}
               >
-                Our Suppliers & Fabric Care
+                Our Suppliers & Fabric Maintenance
               </Typography>
               <Typography
                 sx={{
@@ -290,7 +290,7 @@ export default function FabricPage() {
                   mb: 4,
                 }}
               >
-                To make your online fabric selection experience easier, we separated our fabric suppliers based on price range into Regular & Premium. Feel free to browse through our selected Material suppliers. Additionally, explore our specialized Fabric Care Guide for maintaining performance fabrics.
+                To make online fabric selection easier, we separate suppliers by price range and material category. You can also explore our dedicated Fabric Maintenance Library for source-backed care guidance on Alta, Crypton, Endurepel, FibreGuard, and other performance upholstery finishes.
               </Typography>
               <Button
                 component={Link}
@@ -312,7 +312,7 @@ export default function FabricPage() {
                   },
                 }}
               >
-                View Fabric Care Guide
+                View Maintenance Library
               </Button>
             </Box>
             <Box sx={{ flex: 1, position: "relative" }}>

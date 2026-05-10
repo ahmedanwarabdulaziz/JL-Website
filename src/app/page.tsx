@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/HeroSection";
 import TrustBar from "@/components/TrustBar";
+import CommercialLogos from "@/components/CommercialLogos";
 import { useQuotationModal } from "@/contexts/QuotationModalContext";
 import ArtistrySection from "@/components/ArtistrySection";
 import ProjectExplorer from "@/components/ProjectExplorer";
@@ -22,6 +23,7 @@ export default function HomePage() {
       <HeroSection />
       <TrustBar />
       <ArtistrySection />
+      <CommercialLogos />
       <ProjectExplorer />
       <RegionalReach />
 

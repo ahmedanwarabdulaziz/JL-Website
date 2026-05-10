@@ -1,296 +1,501 @@
-"use client";
-
-import { Box, Container, Typography, Grid, Stack, Button, Card, CardContent, Divider } from "@mui/material";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Box, Button, Card, CardContent, Chip, Container, Divider, Grid, Stack, Typography } from "@mui/material";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import CleanHandsOutlinedIcon from '@mui/icons-material/CleanHandsOutlined';
-import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined';
-import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
-import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
-import { useQuotationModal } from "@/contexts/QuotationModalContext";
-import React from 'react';
+import { FABRIC_CARE_BRANDS, FABRIC_CARE_PRINCIPLES, FABRIC_CARE_VIDEOS } from "@/lib/fabric-care";
 
 const BRAND_ORANGE = "#f9c349";
+const FEATURED_BRANDS = FABRIC_CARE_BRANDS.slice(0, 3);
 
-const careFundamentals = [
-  { text: "Immediate action prevents stain penetration and setting", icon: <CleanHandsOutlinedIcon /> },
-  { text: "Gentle techniques preserve protective treatments", icon: <WaterDropOutlinedIcon /> },
-  { text: "Appropriate solutions maintain fabric integrity", icon: <ScienceOutlinedIcon /> },
-  { text: "Thorough rinsing prevents residue buildup", icon: <ShieldOutlinedIcon /> },
-  { text: "Complete drying prevents moisture-related issues", icon: <VerifiedUserOutlinedIcon /> }
-];
-
-const brandTechnologies = [
-  {
-    title: "Crypton",
-    desc: "Crypton represents the pinnacle of fabric protection with its patented barrier system that's built into the fabric during manufacturing. This comprehensive treatment provides unmatched resistance against liquids, bacteria, odors, and stains while remaining completely invisible. The protection cannot wash out or wear away, making it perfect for healthcare, hospitality, and family environments."
-  },
-  {
-    title: "Alta",
-    desc: "Alta uses water-based, high-performance technology to repel water and oil-based stains. Alta's finishes are tailored to a variety of specific environments including residential, workplace, hospitality, healthcare and more. Alta's permanent technology can endure spot cleaning, commercial laundering and dry cleaning."
-  },
-  {
-    title: "Fibreguard",
-    desc: "Fibreguard creates molecular-level protection around individual fabric fibers, forming an invisible barrier that repels stains while maintaining the fabric's original texture and breathability. This advanced treatment enhances soil release properties, making cleaning easier while providing long-lasting protection that withstands multiple cleaning cycles."
-  },
-  {
-    title: "Endurepel",
-    desc: "Endurepel offers two specialized formulations - Shield and Armour - designed for different performance requirements. Shield provides fluorocarbon-free protection with superior water and stain beading properties, while Armour delivers enhanced antimicrobial and anti-mildew protection for coated products. Both formulations offer exceptional moisture and odor resistance."
-  }
-];
+export const metadata: Metadata = {
+  title: "Fabric Maintenance Library",
+  description:
+    "Source-backed cleaning and maintenance guidance for Alta, Crypton, Endurepel, FibreGuard, and other performance upholstery fabrics.",
+};
 
 export default function FabricCareGuidePage() {
-  const { openQuotationModal } = useQuotationModal();
-
   return (
     <Box sx={{ minHeight: "100dvh", display: "flex", flexDirection: "column", bgcolor: "#fff" }}>
       <Header />
-      
-      {/* Hero Section */}
+
       <Box
         component="section"
         sx={{
           position: "relative",
-          height: { xs: "auto", md: "70vh" },
-          minHeight: { xs: 500, md: 500 },
-          py: { xs: 12, md: 0 },
-          display: "flex",
-          alignItems: "center",
-          color: "#fff",
           overflow: "hidden",
+          color: "#fff",
+          background:
+            "radial-gradient(circle at top left, rgba(249,195,73,0.18) 0%, rgba(249,195,73,0) 28%), linear-gradient(180deg, #171717 0%, #111111 100%)",
         }}
       >
         <Box
           sx={{
             position: "absolute",
             inset: 0,
-            backgroundImage: `url(https://images.unsplash.com/photo-1581539250439-c9668bd640f8?q=80&w=2000&auto=format&fit=crop)`, // Cleaning / Fresh linen aesthetic
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            animation: "kenburns 20s infinite alternate ease-in-out",
-            "@keyframes kenburns": {
-              "0%": { transform: "scale(1)" },
-              "100%": { transform: "scale(1.05)" },
-            },
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+            backgroundSize: "120px 120px",
+            maskImage: "linear-gradient(180deg, rgba(0,0,0,0.8), rgba(0,0,0,0.15))",
+            pointerEvents: "none",
           }}
         />
 
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(to left, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.2) 100%)",
-          }}
-        />
-        
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
+        <Container maxWidth="xl" sx={{ maxWidth: 1320, px: { xs: 3, sm: 4, md: 6 }, py: { xs: 10, md: 13 } }}>
+          <Grid container spacing={{ xs: 6, md: 8 }} alignItems="center">
+            <Grid item xs={12} lg={6.5}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: BRAND_ORANGE,
+                  letterSpacing: "0.18em",
+                  fontWeight: 700,
+                  display: "block",
+                  mb: 2,
+                }}
+              >
+                Fabric Maintenance Library
+              </Typography>
 
-        <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1, px: { xs: 3, md: 6 } }}>
-          <Box
-            sx={{
-              maxWidth: 800,
-              ml: { md: 'auto' }, // push to right slightly to be different and elegant
-              p: { xs: 3, md: 5 },
-              bgcolor: "rgba(0, 0, 0, 0.4)",
-              backdropFilter: "blur(12px)",
-              borderRadius: 4,
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-            }}
-          >
-            <Typography
-              variant="overline"
-              sx={{
-                color: BRAND_ORANGE,
-                letterSpacing: "0.2em",
-                fontWeight: 700,
-                display: "block",
-                mb: 2,
-                textTransform: "uppercase",
-                fontSize: { xs: "0.75rem", md: "0.875rem" }
-              }}
-            >
-              Cleanable Performance
-            </Typography>
+              <Typography
+                component="h1"
+                sx={{
+                  fontFamily: "var(--font-heading)",
+                  fontWeight: 600,
+                  fontSize: { xs: "2.6rem", sm: "3.4rem", md: "4.6rem" },
+                  lineHeight: 1.08,
+                  letterSpacing: "-0.02em",
+                  maxWidth: 860,
+                }}
+              >
+                Professional fabric care, organized by brand and built to be easy to follow.
+              </Typography>
 
-            <Typography
-              component="h1"
-              sx={{
-                fontFamily: "var(--font-heading)",
-                fontWeight: 700,
-                fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4.5rem" },
-                lineHeight: { xs: 1.15, md: 1.1 },
-                letterSpacing: "-0.02em",
-                mb: 3,
-                textShadow: "0 2px 20px rgba(0,0,0,0.5)",
-              }}
-            >
-              Fabric Care <span style={{ color: BRAND_ORANGE, fontStyle: "italic", fontWeight: 600 }}>Solutions</span>
-            </Typography>
+              <Typography
+                sx={{
+                  mt: 3,
+                  maxWidth: 760,
+                  color: "rgba(255,255,255,0.76)",
+                  fontSize: { xs: "1rem", md: "1.125rem" },
+                  lineHeight: 1.8,
+                }}
+              >
+                This library combines official cleaning guidance, JL workshop notes, and video demonstrations for the upholstery finishes clients ask
+                about most often. Start with the page that matches your fabric, then confirm the exact cleaning code before you clean.
+              </Typography>
 
-            <Typography
-              sx={{
-                fontSize: { xs: "1rem", md: "1.125rem" },
-                color: "rgba(255, 255, 255, 0.85)",
-                mb: 0,
-                lineHeight: 1.7,
-                fontFamily: "var(--font-body)",
-                textShadow: "0 1px 8px rgba(0,0,0,0.5)",
-              }}
-            >
-              Understanding proper care techniques for performance fabrics ensures optimal longevity and sustained protective properties. Our comprehensive care guide addresses premier fabric treatment technologies, each engineered with distinct protective characteristics requiring specialized care protocols.
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 4.5 }}>
+                <Button
+                  component={Link}
+                  href="#brand-library"
+                  variant="contained"
+                  size="large"
+                  sx={{
+                    minHeight: 56,
+                    px: 4,
+                    bgcolor: BRAND_ORANGE,
+                    color: "#181818",
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    borderRadius: "999px",
+                    boxShadow: "0 16px 32px rgba(249,195,73,0.18)",
+                    "&:hover": { bgcolor: "#dfb042" },
+                  }}
+                >
+                  Explore Brands
+                </Button>
 
-      {/* Main Content Areas */}
-      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: "#fff", flex: 1 }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
-          <Stack spacing={{ xs: 8, md: 12 }}>
-            
-            {/* The Science & Fundamentals */}
-            <Grid container spacing={8} alignItems="center">
-              <Grid item xs={12} md={6}>
-                <Typography variant="h3" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 3 }}>
-                  The Science Behind Performance Fabric Care
-                </Typography>
-                <Typography sx={{ color: "text.secondary", fontSize: "1.125rem", lineHeight: 1.8, mb: 4 }}>
-                  Performance fabrics incorporate advanced treatment technologies that create protective barriers at the molecular level. These treatments provide exceptional resistance to stains, moisture, and soiling while preserving the fabric&apos;s aesthetic and tactile qualities. Proper care techniques preserve these engineered properties, ensuring your investment continues delivering superior performance.
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Card elevation={0} sx={{ bgcolor: "#faf9f6", borderRadius: "16px", p: { xs: 3, md: 5 }, border: "1px solid rgba(0,0,0,0.05)" }}>
-                  <Typography variant="h5" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 4 }}>
-                    Essential Care Fundamentals
-                  </Typography>
-                  <Stack spacing={3}>
-                    {careFundamentals.map((item, idx) => (
-                      <Stack direction="row" spacing={2} alignItems="center" key={idx}>
-                        <Box sx={{ color: BRAND_ORANGE, display: "flex" }}>{item.icon}</Box>
-                        <Typography sx={{ fontFamily: "var(--font-body)", fontSize: "1.0625rem", color: "#1a1a1a" }}>
-                          {item.text}
+                <Button
+                  component={Link}
+                  href="/contact"
+                  variant="outlined"
+                  size="large"
+                  sx={{
+                    minHeight: 56,
+                    px: 4,
+                    borderColor: "rgba(255,255,255,0.18)",
+                    color: "#fff",
+                    fontWeight: 600,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    borderRadius: "999px",
+                    "&:hover": {
+                      borderColor: "rgba(255,255,255,0.34)",
+                      bgcolor: "rgba(255,255,255,0.04)",
+                    },
+                  }}
+                >
+                  Ask About Your Fabric
+                </Button>
+              </Stack>
+            </Grid>
+
+            <Grid item xs={12} lg={5.5}>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={7}>
+                  <Box
+                    sx={{
+                      position: "relative",
+                      minHeight: { xs: 320, sm: 440 },
+                      borderRadius: 5,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      boxShadow: "0 24px 60px rgba(0,0,0,0.24)",
+                      backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.6)), url(${FEATURED_BRANDS[0].images.hero})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
+                  >
+                    <Box sx={{ position: "absolute", inset: 0, p: 3, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <Chip label={FEATURED_BRANDS[0].shortName} sx={{ alignSelf: "flex-start", bgcolor: "rgba(255,255,255,0.9)", fontWeight: 700 }} />
+                      <Box>
+                        <Typography sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "1.7rem", mb: 1 }}>
+                          {FEATURED_BRANDS[0].images.note}
                         </Typography>
-                      </Stack>
+                        <Typography sx={{ color: "rgba(255,255,255,0.74)", lineHeight: 1.7 }}>{FEATURED_BRANDS[0].summary}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} sm={5}>
+                  <Stack spacing={2.5} sx={{ height: "100%" }}>
+                    {FEATURED_BRANDS.slice(1).map((brand) => (
+                      <Box
+                        key={brand.slug}
+                        sx={{
+                          position: "relative",
+                          flex: 1,
+                          minHeight: 208,
+                          borderRadius: 4,
+                          overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.62)), url(${brand.images.hero})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }}
+                      >
+                        <Box sx={{ position: "absolute", inset: 0, p: 2.5, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                          <Typography sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "1.4rem", mb: 0.5 }}>{brand.name}</Typography>
+                          <Typography sx={{ color: "rgba(255,255,255,0.72)", fontSize: "0.9rem", lineHeight: 1.6 }}>{brand.images.note}</Typography>
+                        </Box>
+                      </Box>
                     ))}
                   </Stack>
-                </Card>
+                </Grid>
               </Grid>
-            </Grid>
-
-            <Divider />
-
-            {/* Brands */}
-            <Box>
-              <Typography variant="h3" textAlign="center" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 8 }}>
-                Treatment Technologies
-              </Typography>
-              <Grid container spacing={4}>
-                {brandTechnologies.map((brand, idx) => (
-                  <Grid item xs={12} md={6} key={idx}>
-                    <Card 
-                      elevation={0}
-                      sx={{ 
-                        height: "100%",
-                        p: { xs: 4, md: 5 },
-                        border: "1px solid rgba(0,0,0,0.08)",
-                        borderRadius: "16px",
-                        transition: "all 0.3s ease",
-                        "&:hover": {
-                          borderColor: "rgba(249, 195, 73, 0.4)",
-                          boxShadow: "0 10px 40px rgba(0,0,0,0.04)",
-                        }
-                      }}
-                    >
-                      <Typography variant="h4" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, color: BRAND_ORANGE, mb: 3 }}>
-                        {brand.title}
-                      </Typography>
-                      <Typography sx={{ color: "text.secondary", fontSize: "1.0625rem", lineHeight: 1.8 }}>
-                        {brand.desc}
-                      </Typography>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-            
-          </Stack>
-        </Container>
-      </Box>
-
-      {/* Trust / Final Notes Section */}
-      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: "#faf9f6" }}>
-        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 }, textAlign: "center" }}>
-          <Grid container spacing={6}>
-            <Grid item xs={12} md={6}>
-               <Typography variant="h5" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 2 }}>
-                  Why Choose Professional Fabric Care?
-               </Typography>
-               <Typography sx={{ color: "text.secondary", lineHeight: 1.8, maxWidth: "500px", mx: "auto" }}>
-                  Investing in proper fabric care extends the life of your performance textiles while maintaining their engineered benefits. Our comprehensive approach ensures you get maximum value from your fabric investment while preserving the advanced protection features that make these treatments exceptional.
-               </Typography>
-            </Grid>
-            <Grid item xs={12} md={6}>
-               <Typography variant="h5" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 2 }}>
-                  Expert Support Available
-               </Typography>
-               <Typography sx={{ color: "text.secondary", lineHeight: 1.8, maxWidth: "500px", mx: "auto" }}>
-                  For complex cleaning challenges or specialized applications, our fabric care experts are available to provide personalized guidance and professional recommendations tailored to your specific needs and fabric types.
-               </Typography>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
-      {/* Global CTA Section */}
-      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: "#fff", color: "#1a1a1a", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-        <Container maxWidth="md" sx={{ px: 3, textAlign: "center" }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontFamily: 'var(--font-heading)',
-              fontWeight: 600,
-              color: "#1a1a1a",
-              fontSize: { xs: "2rem", md: "2.5rem" },
-              letterSpacing: "0.01em",
-              mb: 1,
-            }}
-          >
-            Ready to upgrade your furniture?
-          </Typography>
-          <Typography sx={{ color: "rgba(0,0,0,0.7)", fontSize: "1.125rem", fontFamily: "var(--font-body)", mt: 1.5, mb: 4 }}>
-            Get a quotation or speak with our masterful team today.
-          </Typography>
-          <Button
-            onClick={openQuotationModal}
-            variant="contained"
-            size="large"
-            disableElevation
-            sx={{
-              minHeight: 56,
-              minWidth: 200,
-              bgcolor: BRAND_ORANGE,
-              color: "#fff",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              fontSize: "0.875rem",
-              borderRadius: "30px",
-              "&:hover": { bgcolor: "#dfb042" },
-            }}
-          >
-            Request quotation
-          </Button>
+      <Box sx={{ py: { xs: 7, md: 9 }, bgcolor: "#faf9f6" }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+          <Grid container spacing={3}>
+            {FABRIC_CARE_PRINCIPLES.map((principle, index) => (
+              <Grid item xs={12} md={6} lg={index === 0 ? 12 : 6} key={principle}>
+                <Box
+                  sx={{
+                    height: "100%",
+                    p: { xs: 3, md: 3.5 },
+                    borderRadius: 4,
+                    bgcolor: "#fff",
+                    border: "1px solid rgba(0,0,0,0.06)",
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.03)",
+                  }}
+                >
+                  <Typography sx={{ color: BRAND_ORANGE, fontWeight: 700, letterSpacing: "0.08em", mb: 1 }}>0{index + 1}</Typography>
+                  <Typography sx={{ color: "#1a1a1a", fontSize: { xs: "1rem", md: "1.06rem" }, lineHeight: 1.8 }}>{principle}</Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
         </Container>
       </Box>
 
+      <Box id="brand-library" sx={{ py: { xs: 8, md: 11 }, bgcolor: "#fff" }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+          <Box sx={{ textAlign: "center", mb: { xs: 6, md: 8 } }}>
+            <Typography
+              variant="overline"
+              sx={{ color: BRAND_ORANGE, letterSpacing: "0.15em", fontWeight: 700, display: "block", mb: 1.5 }}
+            >
+              Brand Directory
+            </Typography>
+            <Typography
+              component="h2"
+              sx={{
+                fontFamily: "var(--font-heading)",
+                fontWeight: 600,
+                color: "#1a1a1a",
+                fontSize: { xs: "2.15rem", md: "3rem" },
+                lineHeight: 1.15,
+                mb: 2,
+              }}
+            >
+              Choose the fabric finish you want to maintain.
+            </Typography>
+            <Typography sx={{ maxWidth: 700, mx: "auto", color: "text.secondary", lineHeight: 1.8 }}>
+              Each page is focused on one brand, with a cleaner visual layout, simpler instructions, and direct source links.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            {FABRIC_CARE_BRANDS.map((brand) => (
+              <Grid item xs={12} md={6} lg={4} key={brand.slug}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    height: "100%",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    transition: "all 0.35s ease",
+                    "&:hover": {
+                      transform: "translateY(-6px)",
+                      borderColor: "rgba(249,195,73,0.35)",
+                      boxShadow: "0 22px 46px rgba(0,0,0,0.08)",
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      position: "relative",
+                      minHeight: 220,
+                      backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.62)), url(${brand.images.hero})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
+                  >
+                    <Box sx={{ position: "absolute", inset: 0, p: 3, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+                        <Chip
+                          label={brand.sourceStatus === "official" ? "Official guidance" : "Verify with supplier"}
+                          sx={{
+                            bgcolor: "rgba(255,255,255,0.88)",
+                            color: "#1a1a1a",
+                            fontWeight: 700,
+                          }}
+                        />
+                        <Typography sx={{ color: "rgba(255,255,255,0.75)", fontSize: "0.8rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                          {brand.heroEyebrow}
+                        </Typography>
+                      </Stack>
+
+                      <Box>
+                        <Typography sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "2rem", color: "#fff", mb: 0.5 }}>
+                          {brand.name}
+                        </Typography>
+                        <Typography sx={{ color: "rgba(255,255,255,0.75)", lineHeight: 1.7 }}>{brand.images.note}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <CardContent sx={{ p: { xs: 3, md: 4 }, display: "flex", flexDirection: "column", height: "calc(100% - 220px)" }}>
+                    <Typography sx={{ color: "text.secondary", lineHeight: 1.8 }}>{brand.summary}</Typography>
+
+                    <Stack spacing={1} sx={{ mt: 3 }}>
+                      {brand.quickFacts.slice(0, 3).map((fact) => (
+                        <Typography key={fact} sx={{ color: "#1a1a1a", lineHeight: 1.6 }}>
+                          {fact}
+                        </Typography>
+                      ))}
+                    </Stack>
+
+                    <Box sx={{ mt: "auto", pt: 3 }}>
+                      <Button
+                        component={Link}
+                        href={`/fabric-care-guide/${brand.slug}`}
+                        variant="outlined"
+                        fullWidth
+                        sx={{
+                          minHeight: 52,
+                          borderColor: "rgba(0,0,0,0.1)",
+                          color: "#1a1a1a",
+                          fontWeight: 600,
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          borderRadius: "999px",
+                          "&:hover": { borderColor: "rgba(0,0,0,0.28)", bgcolor: "transparent" },
+                        }}
+                      >
+                        View {brand.shortName} Guide
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: "#faf9f6" }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+          <Box sx={{ textAlign: "center", mb: { xs: 5, md: 7 } }}>
+            <Typography
+              variant="overline"
+              sx={{ color: BRAND_ORANGE, letterSpacing: "0.15em", fontWeight: 700, display: "block", mb: 1.5 }}
+            >
+              Official Demo Videos
+            </Typography>
+            <Typography
+              component="h2"
+              sx={{
+                fontFamily: "var(--font-heading)",
+                fontWeight: 600,
+                color: "#1a1a1a",
+                fontSize: { xs: "2rem", md: "2.75rem" },
+                lineHeight: 1.15,
+                mb: 2,
+              }}
+            >
+              Watch the cleaning method before you try it.
+            </Typography>
+            <Typography sx={{ maxWidth: 720, mx: "auto", color: "text.secondary", lineHeight: 1.8 }}>
+              These demos complement the written care pages and help make rinsing, blotting, and stain-lift technique much clearer.
+            </Typography>
+          </Box>
+
+          <Grid container spacing={3}>
+            {FABRIC_CARE_VIDEOS.map((video) => (
+              <Grid item xs={12} md={6} key={video.watchUrl}>
+                <Card elevation={0} sx={{ borderRadius: 4, overflow: "hidden", border: "1px solid rgba(0,0,0,0.06)" }}>
+                  <Box
+                    sx={{
+                      position: "relative",
+                      width: "100%",
+                      paddingTop: "56.25%",
+                      bgcolor: "#111",
+                    }}
+                  >
+                    <Box
+                      component="iframe"
+                      src={video.embedUrl}
+                      title={video.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        border: 0,
+                      }}
+                    />
+                  </Box>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, color: "#1a1a1a", fontSize: "1.35rem", mb: 1 }}>
+                      {video.title}
+                    </Typography>
+                    <Typography sx={{ color: "text.secondary", mb: 2 }}>{video.brand} | {video.provider}</Typography>
+                    <Button
+                      component={Link}
+                      href={video.watchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ color: BRAND_ORANGE, fontWeight: 700, px: 0, "&:hover": { bgcolor: "transparent" } }}
+                    >
+                      Watch on {video.provider}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: "#fff" }}>
+        <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 } }}>
+          <Grid container spacing={4} alignItems="stretch">
+            <Grid item xs={12} md={6}>
+              <Box
+                sx={{
+                  minHeight: { xs: 280, md: 100 },
+                  height: "100%",
+                  borderRadius: 5,
+                  overflow: "hidden",
+                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.6)), url(${FABRIC_CARE_BRANDS[3].images.detail})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  boxShadow: "0 24px 50px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Box sx={{ height: "100%", p: { xs: 3, md: 4 }, display: "flex", alignItems: "flex-end" }}>
+                  <Typography sx={{ color: "#fff", fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: { xs: "1.8rem", md: "2.2rem" }, maxWidth: 420 }}>
+                    If you are unsure of the fabric, confirm first and clean second.
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Box sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <Typography
+                  component="h2"
+                  sx={{
+                    fontFamily: "var(--font-heading)",
+                    fontWeight: 600,
+                    color: "#1a1a1a",
+                    fontSize: { xs: "2rem", md: "2.5rem" },
+                    mb: 2,
+                  }}
+                >
+                  Need help identifying your fabric before cleaning?
+                </Typography>
+                <Typography sx={{ color: "text.secondary", lineHeight: 1.8, mb: 4 }}>
+                  If you are not fully sure whether your material is Alta, Crypton, Endurepel, FibreGuard, Dura-Guard, vinyl, or another upholstery finish,
+                  send us a photo or the supplier tag first. It is always safer to confirm the fabric and cleaning code before you start spot treatment.
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    component={Link}
+                    href="/contact"
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      minHeight: 56,
+                      px: 4,
+                      bgcolor: BRAND_ORANGE,
+                      color: "#fff",
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      borderRadius: "999px",
+                      "&:hover": { bgcolor: "#dfb042" },
+                    }}
+                  >
+                    Contact JL Upholstery
+                  </Button>
+                  <Button
+                    component={Link}
+                    href="/fabric"
+                    variant="outlined"
+                    size="large"
+                    sx={{
+                      minHeight: 56,
+                      px: 4,
+                      borderColor: "rgba(0,0,0,0.12)",
+                      color: "#1a1a1a",
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      borderRadius: "999px",
+                      "&:hover": { borderColor: "rgba(0,0,0,0.3)", bgcolor: "transparent" },
+                    }}
+                  >
+                    Browse Fabric Options
+                  </Button>
+                </Stack>
+              </Box>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      <Divider />
       <Footer />
     </Box>
   );

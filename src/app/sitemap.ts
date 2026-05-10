@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getProjects, getUpholsteryPieces } from "@/lib/firestore";
+import { FABRIC_CARE_BRANDS } from "@/lib/fabric-care";
 import { SITE_URL } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -36,6 +37,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: makeUrl(path),
     lastModified: now,
   }));
+  const fabricCareEntries: MetadataRoute.Sitemap = FABRIC_CARE_BRANDS.map((brand) => ({
+    url: makeUrl(`/fabric-care-guide/${brand.slug}`),
+    lastModified: now,
+  }));
 
   try {
     const [projects, pieces] = await Promise.all([
@@ -53,8 +58,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: toDate(piece.updatedAt) ?? toDate(piece.createdAt) ?? now,
     }));
 
-    return [...staticEntries, ...projectEntries, ...pieceEntries];
+    return [...staticEntries, ...fabricCareEntries, ...projectEntries, ...pieceEntries];
   } catch {
-    return staticEntries;
+    return [...staticEntries, ...fabricCareEntries];
   }
 }

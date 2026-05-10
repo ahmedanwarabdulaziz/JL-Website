@@ -12,10 +12,11 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdminEmail } from "@/lib/constants";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { signIn, user, loading, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -154,5 +155,13 @@ export default function LoginPage() {
         </Paper>
       </Box>
     </Container>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <AuthProvider>
+      <LoginPageContent />
+    </AuthProvider>
   );
 }

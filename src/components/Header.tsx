@@ -37,7 +37,7 @@ const NAV_LINKS = [
     href: "/fabric", 
     label: "Fabric",
     subLinks: [
-      { href: "/fabric-care-guide", label: "Fabric Care Guide" }
+      { href: "/fabric-care-guide", label: "Fabric Maintenance" }
     ]
   },
   { href: "/faq", label: "FAQ" },
