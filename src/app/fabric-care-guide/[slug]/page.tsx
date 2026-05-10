@@ -5,6 +5,11 @@ import { Box, Button, Card, CardContent, Chip, Container, Divider, Grid, Stack, 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { FABRIC_CARE_BRANDS, FABRIC_CARE_BRAND_MAP } from "@/lib/fabric-care";
+import WaterDropOutlinedIcon from "@mui/icons-material/WaterDropOutlined";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
+import CleaningServicesOutlinedIcon from "@mui/icons-material/CleaningServicesOutlined";
+import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 
 const BRAND_ORANGE = "#f9c349";
 
@@ -26,14 +31,48 @@ function DetailList({ items }: { items: string[] }) {
   );
 }
 
+function StylishDetailList({ items }: { items: string[] }) {
+  return (
+    <Stack spacing={2}>
+      {items.map((item, index) => (
+        <Stack direction="row" spacing={1.5} key={index} alignItems="flex-start">
+          <Box
+            sx={{
+              mt: 0.25,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              bgcolor: "rgba(0,0,0,0.04)",
+              color: "#1a1a1a",
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircleIcon sx={{ fontSize: 16 }} />
+          </Box>
+          <Typography sx={{ color: "text.secondary", lineHeight: 1.6, fontSize: "0.95rem" }}>
+            {item}
+          </Typography>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 function SectionCard({
   title,
   eyebrow,
   items,
+  icon,
+  useStylishBullets,
 }: {
   title: string;
   eyebrow: string;
   items: string[];
+  icon?: React.ReactNode;
+  useStylishBullets?: boolean;
 }) {
   return (
     <Card
@@ -46,16 +85,34 @@ function SectionCard({
       }}
     >
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        <Typography
-          variant="overline"
-          sx={{ color: BRAND_ORANGE, letterSpacing: "0.14em", fontWeight: 700, display: "block", mb: 1 }}
-        >
-          {eyebrow}
-        </Typography>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+          {icon && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 32,
+                height: 32,
+                borderRadius: 2,
+                bgcolor: "rgba(0,0,0,0.04)",
+                color: "#1a1a1a",
+              }}
+            >
+              {icon}
+            </Box>
+          )}
+          <Typography
+            variant="overline"
+            sx={{ color: "text.secondary", letterSpacing: "0.14em", fontWeight: 700, display: "block", m: 0 }}
+          >
+            {eyebrow}
+          </Typography>
+        </Stack>
         <Typography sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "1.8rem", color: "#1a1a1a", mb: 2 }}>
           {title}
         </Typography>
-        <DetailList items={items} />
+        {useStylishBullets ? <StylishDetailList items={items} /> : <DetailList items={items} />}
       </CardContent>
     </Card>
   );
@@ -394,16 +451,40 @@ export default async function FabricCareBrandPage({ params }: BrandPageProps) {
 
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <SectionCard title="Routine care" eyebrow="Ongoing maintenance" items={brand.routineCare} />
+              <SectionCard
+                title="Routine care"
+                eyebrow="Ongoing maintenance"
+                items={brand.routineCare}
+                icon={<AutorenewOutlinedIcon fontSize="small" />}
+                useStylishBullets={true}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
-              <SectionCard title="Immediate spill response" eyebrow="First action" items={brand.immediateSpillResponse} />
+              <SectionCard
+                title="Immediate spill response"
+                eyebrow="First action"
+                items={brand.immediateSpillResponse}
+                icon={<WaterDropOutlinedIcon fontSize="small" />}
+                useStylishBullets={true}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
-              <SectionCard title="Stubborn stain care" eyebrow="When more work is needed" items={brand.stubbornStainCare} />
+              <SectionCard
+                title="Stubborn stain care"
+                eyebrow="When more work is needed"
+                items={brand.stubbornStainCare}
+                icon={<CleaningServicesOutlinedIcon fontSize="small" />}
+                useStylishBullets={true}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
-              <SectionCard title="Cautions" eyebrow="Avoid these mistakes" items={brand.cautions} />
+              <SectionCard
+                title="Cautions"
+                eyebrow="Avoid these mistakes"
+                items={brand.cautions}
+                icon={<WarningAmberOutlinedIcon fontSize="small" />}
+                useStylishBullets={true}
+              />
             </Grid>
           </Grid>
         </Container>
