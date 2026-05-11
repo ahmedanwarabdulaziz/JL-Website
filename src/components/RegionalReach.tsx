@@ -4,7 +4,7 @@ import { Box, Container, Typography, Grid, Chip } from "@mui/material";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
 
-const AREAS_SERVED = [
+const PRIMARY_CITIES = [
   "Milton",
   "Brampton",
   "Oakville",
@@ -15,19 +15,26 @@ const AREAS_SERVED = [
   "The Greater Toronto Area (GTA)",
 ];
 
+const GOOGLE_MAP_CENTER = "43.2557,-79.8711";
+const GOOGLE_MAP_ZOOM = 8;
+
 export default function RegionalReach() {
+  const mapsEmbedApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY;
+  const mapSrc = mapsEmbedApiKey
+    ? `https://www.google.com/maps/embed/v1/view?key=${mapsEmbedApiKey}&center=${GOOGLE_MAP_CENTER}&zoom=${GOOGLE_MAP_ZOOM}&maptype=roadmap`
+    : `https://www.google.com/maps?output=embed&ll=${GOOGLE_MAP_CENTER}&z=${GOOGLE_MAP_ZOOM}`;
+
   return (
     <Box
       component="section"
       sx={{
-        py: { xs: 8, md: 10, lg: 12 },
-        bgcolor: "#111111", // Dark, elegant background
+        py: { xs: 6, md: 8, lg: 9 },
+        bgcolor: "#111111",
         color: "#fff",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Decorative background element */}
       <Box
         sx={{
           position: "absolute",
@@ -41,9 +48,8 @@ export default function RegionalReach() {
       />
 
       <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 }, position: "relative", zIndex: 1 }}>
-        <Grid container spacing={{ xs: 6, md: 10 }} alignItems="center">
-          {/* Left Column: Text */}
-          <Grid item xs={12} md={6}>
+        <Grid container spacing={{ xs: 4, md: 6 }} alignItems="start">
+          <Grid item xs={12} md={4.5}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
               <LocalShippingOutlinedIcon sx={{ color: "var(--brand-orange)", fontSize: 28 }} />
               <Typography
@@ -64,47 +70,56 @@ export default function RegionalReach() {
               sx={{
                 fontFamily: "var(--font-heading)",
                 fontWeight: 600,
-                fontSize: { xs: "2.25rem", sm: "2.75rem", md: "3rem" },
+                fontSize: { xs: "2rem", sm: "2.35rem", md: "2.7rem" },
                 letterSpacing: "0.01em",
                 lineHeight: 1.2,
-                mb: 3,
+                mb: 2.25,
                 color: "#ffffff",
               }}
             >
-              Professional Logistics for a Wide <span style={{ color: "var(--brand-orange)", fontStyle: "italic" }}>Reputation.</span>
+              Professional Logistics for a Wider <span style={{ color: "var(--brand-orange)", fontStyle: "italic" }}>Service Region.</span>
             </Typography>
 
             <Typography
               sx={{
                 color: "rgba(255, 255, 255, 0.7)",
-                fontSize: { xs: "1.0625rem", md: "1.125rem" },
+                fontSize: { xs: "1rem", md: "1.0625rem" },
                 fontFamily: "var(--font-body)",
                 lineHeight: 1.7,
-                mb: 4,
-                maxWidth: 500,
+                mb: 3,
+                maxWidth: 480,
               }}
             >
-              We offer competitive pickup and delivery services across the region, allowing our specialized Milton workshop to serve the most discerning clients seamlessly.
+              Our Milton workshop is positioned to support pickup and delivery across a broader regional footprint, not just a few isolated cities. This lets us present our service area clearly while leaving room for nearby communities between Niagara Falls, the GTA, and Guelph.
             </Typography>
-            
-            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, p: 3, bgcolor: "rgba(255,255,255,0.03)", borderRadius: 2, border: "1px solid rgba(255,255,255,0.05)" }}>
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 2,
+                p: 2.5,
+                bgcolor: "rgba(255,255,255,0.03)",
+                borderRadius: 2,
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
               <LocationOnOutlinedIcon sx={{ color: "var(--brand-orange)", mt: 0.5 }} />
               <Box>
-                 <Typography variant="h6" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 1 }}>
-                   Headquartered in Milton
-                 </Typography>
-                 <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9375rem", lineHeight: 1.6 }}>
-                   Our master workshop is centrally located to provide efficient, safe transit for your most valuable pieces anywhere in the GTA.
-                 </Typography>
+                <Typography variant="h6" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 1 }}>
+                  Headquartered in Milton
+                </Typography>
+                <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9375rem", lineHeight: 1.6 }}>
+                  We plan routes efficiently across Halton, Peel, the GTA, Guelph, and the Niagara corridor from one central workshop.
+                </Typography>
               </Box>
             </Box>
           </Grid>
 
-          {/* Right Column: Areas Served */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={7.5}>
             <Box
               sx={{
-                p: { xs: 4, sm: 5 },
+                p: { xs: 3, sm: 3.5, md: 4 },
                 bgcolor: "rgba(255, 255, 255, 0.02)",
                 borderRadius: 4,
                 border: "1px solid rgba(255, 255, 255, 0.05)",
@@ -112,35 +127,74 @@ export default function RegionalReach() {
                 boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
               }}
             >
-              <Typography
-                variant="h5"
+              <Box
                 sx={{
-                  fontFamily: "var(--font-heading)",
-                  fontWeight: 600,
-                  mb: 3,
-                  color: "#ffffff",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
+                  flexDirection: { xs: "column", sm: "row" },
+                  justifyContent: "space-between",
+                  alignItems: { xs: "flex-start", sm: "end" },
+                  gap: 2,
+                  mb: 2,
                 }}
               >
-                Areas We Serve
-              </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-                {AREAS_SERVED.map((area) => (
+                <Box sx={{ maxWidth: 520 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 600,
+                      mb: 1,
+                      color: "#ffffff",
+                    }}
+                  >
+                    Primary Service Areas
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "rgba(255, 255, 255, 0.65)",
+                      fontSize: "0.95rem",
+                      lineHeight: 1.65,
+                    }}
+                  >
+                    Our primary service areas include the cities below, along with nearby communities across the broader Niagara-to-Guelph corridor.
+                  </Typography>
+                </Box>
+
+                <Typography
+                  sx={{
+                    color: "rgba(255, 255, 255, 0.5)",
+                    fontSize: "0.8rem",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Milton to Niagara
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1.25,
+                  mb: 2,
+                }}
+              >
+                {PRIMARY_CITIES.map((area) => (
                   <Chip
                     key={area}
                     label={area}
                     icon={<LocationOnOutlinedIcon fontSize="small" />}
                     sx={{
                       bgcolor: "transparent",
-                      color: "rgba(255, 255, 255, 0.8)",
-                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      color: "rgba(255, 255, 255, 0.82)",
+                      border: "1px solid rgba(255, 255, 255, 0.18)",
                       borderRadius: "8px",
-                      py: 2.5,
-                      px: 0.5,
+                      py: 2,
+                      px: 0.25,
                       fontFamily: "var(--font-body)",
-                      fontSize: "0.9375rem",
+                      fontSize: "0.88rem",
                       fontWeight: 500,
                       transition: "all 0.3s ease",
                       "& .MuiChip-icon": {
@@ -148,12 +202,72 @@ export default function RegionalReach() {
                       },
                       "&:hover": {
                         bgcolor: "rgba(255, 255, 255, 0.05)",
-                        borderColor: "rgba(255, 255, 255, 0.4)",
+                        borderColor: "rgba(255, 255, 255, 0.38)",
                         transform: "translateY(-2px)",
                       },
                     }}
                   />
                 ))}
+              </Box>
+
+              <Box
+                sx={{
+                  position: "relative",
+                  overflow: "hidden",
+                  borderRadius: 3,
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  boxShadow: "0 24px 48px rgba(0,0,0,0.28)",
+                  minHeight: { xs: 250, md: 285 },
+                }}
+              >
+                <Box
+                  component="iframe"
+                  title="JL Upholstery regional service area map"
+                  src={mapSrc}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  sx={{
+                    border: 0,
+                    width: "100%",
+                    height: { xs: 250, md: 285 },
+                    display: "block",
+                    filter: "grayscale(0.15) contrast(1.04) saturate(0.9)",
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: "absolute",
+                    left: 14,
+                    right: 14,
+                    bottom: 14,
+                    p: 1.35,
+                    borderRadius: 2.5,
+                    bgcolor: "rgba(17, 17, 17, 0.84)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(10px)",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: "#ffffff",
+                      fontFamily: "var(--font-heading)",
+                      fontWeight: 600,
+                      fontSize: "0.98rem",
+                      mb: 0.35,
+                    }}
+                  >
+                    Regional Pickup & Delivery Coverage
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      fontSize: "0.84rem",
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    A wider view that includes Milton, the GTA, Guelph, Niagara Falls, and the communities between them.
+                  </Typography>
+                </Box>
               </Box>
             </Box>
           </Grid>
