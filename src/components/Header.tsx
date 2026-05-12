@@ -129,7 +129,7 @@ export default function Header() {
             }}
           >
             <Box component={Link} href="/" sx={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }} onClick={() => setMobileOpen(false)}>
-              <Box component="img" src={LOGO_SRC} alt="JL Upholstery" sx={{ height: { xs: 46, md: 56 }, width: "auto", display: "block" }} />
+              <Box component="img" src={LOGO_SRC} alt="JL Upholstery" sx={{ height: { xs: 56, md: 72 }, width: "auto", display: "block" }} />
             </Box>
 
             {/* Desktop nav */}
@@ -137,7 +137,7 @@ export default function Header() {
               component="nav"
               aria-label="Main navigation"
               sx={{
-                display: { xs: "none", sm: "flex" },
+                display: { xs: "none", lg: "flex" },
                 flex: 1,
                 alignItems: "center",
                 justifyContent: "center",
@@ -217,12 +217,12 @@ export default function Header() {
             </Box>
 
             {/* Desktop CTA */}
-            <Box sx={{ display: { xs: "none", sm: "flex" }, flexShrink: 0 }}>
+            <Box sx={{ display: { xs: "none", lg: "flex" }, flexShrink: 0 }}>
               {ctaButtons}
             </Box>
 
             {/* Mobile: menu toggle button */}
-            <Box sx={{ display: { xs: "flex", sm: "none" }, alignItems: "center", flexShrink: 0 }}>
+            <Box sx={{ display: { xs: "flex", lg: "none" }, alignItems: "center", flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setMobileOpen((o) => !o)}
@@ -249,7 +249,7 @@ export default function Header() {
           </Toolbar>
 
           {/* Mobile: collapsible nav panel (no Modal, in document flow) */}
-          <Collapse in={mobileOpen} sx={{ display: { sm: "none" } }}>
+          <Collapse in={mobileOpen} sx={{ display: { lg: "none" } }}>
             <Box
               sx={{
                 px: 2,
