@@ -149,7 +149,7 @@ export default function FabricPage() {
                 textShadow: "0 1px 10px rgba(0,0,0,0.5)",
               }}
             >
-              Over 25,000 options of material available. Access the industry's most trusted suppliers for residential, commercial, and marine upholstery.
+              Over 25,000 options of material available. Access the industry&apos;s most trusted suppliers for residential, commercial, and marine upholstery.
             </Typography>
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mt: 5 }}>
@@ -295,7 +295,7 @@ export default function FabricPage() {
               Professional Fabric Suppliers
             </Typography>
             <Typography sx={{ color: "text.secondary", fontSize: "1.125rem", maxWidth: 700, mx: "auto" }}>
-              We partner with the industry's most respected textile houses and distributors to offer you an unparalleled selection of high-quality materials.
+              We partner with the industry&apos;s most respected textile houses and distributors to offer you an unparalleled selection of high-quality materials.
             </Typography>
           </Box>
 
