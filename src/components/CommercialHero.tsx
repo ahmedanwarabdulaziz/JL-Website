@@ -6,7 +6,7 @@ import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import CollectionsIcon from "@mui/icons-material/Collections";
 import { useQuotationModal } from "@/contexts/QuotationModalContext";
 
-const HERO_BG = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2000&auto=format&fit=crop";
+const HERO_BG = "/images/23.jpeg";
 const BRAND_ORANGE = "#f9c349";
 
 export default function CommercialHero() {

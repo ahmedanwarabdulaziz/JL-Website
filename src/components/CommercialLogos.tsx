@@ -16,7 +16,6 @@ const SQUARE_LOGOS = [
   "11.png",
   "2.png",
   "3.png",
-  "6.png",
   "top-10.png",
   "top-4.png",
   "top-5.png",
@@ -50,9 +49,12 @@ const RECTANGLE_LOGOS = [
 }));
 
 const ALL_LOGOS = [...RECTANGLE_LOGOS, ...SQUARE_LOGOS];
-const FEATURED_LOGOS = ALL_LOGOS.filter((logo) => logo.src.toLowerCase().includes("/top-"));
-const STANDARD_LOGOS = ALL_LOGOS.filter((logo) => !logo.src.toLowerCase().includes("/top-"));
-const FEATURED_RECTANGLE_LOGOS = FEATURED_LOGOS.filter((logo) => logo.shape === "rectangle");
+const FEATURED_LOGOS = ALL_LOGOS.filter((logo) => logo.src.toLowerCase().includes("/top-") && !logo.src.includes("top-11"));
+const STANDARD_LOGOS = ALL_LOGOS.filter((logo) => !logo.src.toLowerCase().includes("/top-") || logo.src.includes("top-11"));
+const FEATURED_RECTANGLE_LOGOS = [
+  ...FEATURED_LOGOS.filter((logo) => logo.shape === "rectangle"),
+  ...ALL_LOGOS.filter((logo) => logo.src.includes("top-11")),
+];
 const FEATURED_SQUARE_LOGOS = FEATURED_LOGOS.filter((logo) => logo.shape === "square");
 const STANDARD_SPLIT_INDEX = Math.ceil(STANDARD_LOGOS.length / 2);
 const STANDARD_ROW_ONE = STANDARD_LOGOS.slice(0, STANDARD_SPLIT_INDEX);
@@ -505,34 +507,14 @@ export default function CommercialLogos() {
                                 }}
                               >
                                 <Box
-                                  sx={{
-                                    position: "absolute",
-                                    top: 10,
-                                    left: 10,
-                                    px: 1.1,
-                                    py: 0.45,
-                                    borderRadius: 999,
-                                    bgcolor: "rgba(249,195,73,0.12)",
-                                    color: "#8a6511",
-                                    fontSize: "0.62rem",
-                                    fontWeight: 700,
-                                    letterSpacing: "0.1em",
-                                    textTransform: "uppercase",
-                                    lineHeight: 1,
-                                  }}
-                                >
-                                  Top Client
-                                </Box>
-
-                                <Box
                                   component="img"
                                   src={logo.src}
                                   alt={`Signature commercial client logo ${index + 1}`}
                                   sx={{
                                     width: "100%",
                                     height: "100%",
-                                    maxWidth: logo.shape === "rectangle" ? "84%" : "72%",
-                                    maxHeight: logo.shape === "rectangle" ? { xs: 42, md: 48 } : { xs: 60, md: 70 },
+                                    maxWidth: logo.shape === "rectangle" ? "92%" : "86%",
+                                    maxHeight: logo.shape === "rectangle" ? { xs: 68, md: 82 } : { xs: 96, md: 116 },
                                     objectFit: "contain",
                                   }}
                                 />
@@ -614,8 +596,8 @@ export default function CommercialLogos() {
                               key={`${logo.src}-${rowIndex}-${index}`}
                               sx={{
                                 flex: "0 0 auto",
-                                minWidth: isRectangle ? { xs: 138, md: 180 } : { xs: 102, md: 128 },
-                                minHeight: { xs: 66, md: 82 },
+                                minWidth: isRectangle ? { xs: 190, md: 260 } : { xs: 102, md: 128 },
+                                minHeight: isRectangle ? { xs: 88, md: 108 } : { xs: 66, md: 82 },
                                 px: { xs: 1.6, md: 2.25 },
                                 py: { xs: 1.25, md: 1.75 },
                                 borderRadius: 999,
@@ -634,10 +616,12 @@ export default function CommercialLogos() {
                                 sx={{
                                   width: "100%",
                                   height: "100%",
-                                  maxWidth: isRectangle ? "82%" : "66%",
-                                  maxHeight: isRectangle ? { xs: 24, md: 34 } : { xs: 36, md: 48 },
+                                  maxWidth: isRectangle ? "92%" : "78%",
+                                  maxHeight: isRectangle ? { xs: 64, md: 80 } : { xs: 54, md: 66 },
                                   objectFit: "contain",
-                                  opacity: 0.88,
+                                  opacity: 0.92,
+                                  transform: logo.src.includes("top-11") ? "scale(1.65)" : "none",
+                                  transformOrigin: "center",
                                 }}
                               />
                             </Box>

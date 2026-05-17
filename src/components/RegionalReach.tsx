@@ -3,17 +3,37 @@
 import { Box, Container, Typography, Grid, Chip } from "@mui/material";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
 import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import PublicIcon from "@mui/icons-material/Public";
+import Script from "next/script";
 
-const PRIMARY_CITIES = [
-  "Milton",
-  "Brampton",
-  "Oakville",
-  "Mississauga",
-  "Burlington",
-  "Georgetown",
-  "Guelph",
-  "The Greater Toronto Area (GTA)",
+// ── Visual: broad coverage zones (no hard city boundaries) ──────────────────
+const COVERAGE_ZONES = [
+  { label: "Halton Region", note: "Milton, Burlington, Oakville, Georgetown" },
+  { label: "Peel Region", note: "Mississauga, Brampton, Caledon" },
+  { label: "Greater Toronto Area", note: "All 905 & 416 communities" },
+  { label: "Hamilton–Niagara Corridor", note: "Hamilton to Niagara Falls & beyond" },
+  { label: "Wellington County", note: "Guelph, Fergus, Elora & surrounding" },
+  { label: "& Surrounding Areas", note: "If you're unsure, just ask — we likely reach you" },
 ];
+
+// ── SEO: every city name injected as visible-but-subtle prose ───────────────
+const SEO_CITIES_LINE =
+  "Milton, Brampton, Oakville, Mississauga, Burlington, Georgetown, Guelph, Hamilton, Stoney Creek, Ancaster, Dundas, Grimsby, Beamsville, Niagara Falls, St. Catharines, Thorold, Welland, Port Colborne, Kitchener, Waterloo, Cambridge, Fergus, Elora, Etobicoke, Scarborough, North York, Markham, Vaughan, and all communities in between.";
+
+// ── JSON-LD structured data for Google's areaServed ────────────────────────
+const AREA_SERVED_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "JL Upholstery",
+  areaServed: [
+    "Milton", "Brampton", "Oakville", "Mississauga", "Burlington", "Georgetown",
+    "Guelph", "Hamilton", "Stoney Creek", "Ancaster", "Dundas", "Grimsby",
+    "Beamsville", "Niagara Falls", "St. Catharines", "Thorold", "Welland",
+    "Port Colborne", "Kitchener", "Waterloo", "Cambridge", "Fergus", "Elora",
+    "Etobicoke", "Scarborough", "North York", "Markham", "Vaughan",
+    "Greater Toronto Area", "Halton Region", "Peel Region", "Wellington County",
+  ],
+};
 
 const GOOGLE_MAP_CENTER = "43.2557,-79.8711";
 const GOOGLE_MAP_ZOOM = 8;
@@ -35,6 +55,15 @@ export default function RegionalReach() {
         overflow: "hidden",
       }}
     >
+      {/* JSON-LD structured data — invisible to users, indexed by Google */}
+      <Script
+        id="regional-reach-schema"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(AREA_SERVED_SCHEMA) }}
+        strategy="afterInteractive"
+      />
+
+      {/* Background accent */}
       <Box
         sx={{
           position: "absolute",
@@ -42,13 +71,15 @@ export default function RegionalReach() {
           right: 0,
           width: "50%",
           height: "100%",
-          backgroundImage: "radial-gradient(circle at top right, rgba(255,255,255,0.05) 0%, transparent 60%)",
+          backgroundImage:
+            "radial-gradient(circle at top right, rgba(255,255,255,0.05) 0%, transparent 60%)",
           pointerEvents: "none",
         }}
       />
 
       <Container maxWidth="lg" sx={{ px: { xs: 3, sm: 4, md: 6 }, position: "relative", zIndex: 1 }}>
         <Grid container spacing={{ xs: 4, md: 6 }} alignItems="start">
+          {/* ── LEFT COLUMN ──────────────────────────────────────────────── */}
           <Grid item xs={12} md={4.5}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
               <LocalShippingOutlinedIcon sx={{ color: "var(--brand-orange)", fontSize: 28 }} />
@@ -77,7 +108,10 @@ export default function RegionalReach() {
                 color: "#ffffff",
               }}
             >
-              Professional Logistics for a Wider <span style={{ color: "var(--brand-orange)", fontStyle: "italic" }}>Service Region.</span>
+              Professional Logistics for a Wider{" "}
+              <span style={{ color: "var(--brand-orange)", fontStyle: "italic" }}>
+                Service Region.
+              </span>
             </Typography>
 
             <Typography
@@ -90,9 +124,13 @@ export default function RegionalReach() {
                 maxWidth: 480,
               }}
             >
-              Our Milton workshop is positioned to support pickup and delivery across a broader regional footprint, not just a few isolated cities. This lets us present our service area clearly while leaving room for nearby communities between Niagara Falls, the GTA, and Guelph.
+              Our Milton workshop is your central hub — but our reach extends well beyond any
+              single city. We coordinate professional pickup &amp; delivery across a wide regional
+              footprint, from the GTA and Halton all the way to Niagara, Wellington, and the
+              communities in between.
             </Typography>
 
+            {/* HQ card */}
             <Box
               sx={{
                 display: "flex",
@@ -102,20 +140,54 @@ export default function RegionalReach() {
                 bgcolor: "rgba(255,255,255,0.03)",
                 borderRadius: 2,
                 border: "1px solid rgba(255,255,255,0.05)",
+                mb: 3,
               }}
             >
               <LocationOnOutlinedIcon sx={{ color: "var(--brand-orange)", mt: 0.5 }} />
               <Box>
-                <Typography variant="h6" sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 1 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ fontFamily: "var(--font-heading)", fontWeight: 600, mb: 1 }}
+                >
                   Headquartered in Milton
                 </Typography>
-                <Typography sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9375rem", lineHeight: 1.6 }}>
-                  We plan routes efficiently across Halton, Peel, the GTA, Guelph, and the Niagara corridor from one central workshop.
+                <Typography
+                  sx={{ color: "rgba(255, 255, 255, 0.6)", fontSize: "0.9375rem", lineHeight: 1.6 }}
+                >
+                  We plan routes efficiently across Halton, Peel, the GTA, Guelph, and the
+                  Niagara corridor from one central workshop.
                 </Typography>
               </Box>
             </Box>
+
+            {/* "Not sure?" nudge */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                p: 2,
+                bgcolor: "rgba(249,195,73,0.07)",
+                borderRadius: 2,
+                border: "1px solid rgba(249,195,73,0.2)",
+              }}
+            >
+              <PublicIcon sx={{ color: "var(--brand-orange)", flexShrink: 0 }} />
+              <Typography
+                sx={{
+                  color: "rgba(255,255,255,0.85)",
+                  fontSize: "0.9rem",
+                  fontFamily: "var(--font-body)",
+                  lineHeight: 1.55,
+                }}
+              >
+                <strong style={{ color: "var(--brand-orange)" }}>Not sure if we reach you?</strong>{" "}
+                Just ask — our coverage is broad and we accommodate clients across southern Ontario.
+              </Typography>
+            </Box>
           </Grid>
 
+          {/* ── RIGHT COLUMN ─────────────────────────────────────────────── */}
           <Grid item xs={12} md={7.5}>
             <Box
               sx={{
@@ -127,6 +199,7 @@ export default function RegionalReach() {
                 boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
               }}
             >
+              {/* Header row */}
               <Box
                 sx={{
                   display: "flex",
@@ -134,7 +207,7 @@ export default function RegionalReach() {
                   justifyContent: "space-between",
                   alignItems: { xs: "flex-start", sm: "end" },
                   gap: 2,
-                  mb: 2,
+                  mb: 2.5,
                 }}
               >
                 <Box sx={{ maxWidth: 520 }}>
@@ -147,7 +220,7 @@ export default function RegionalReach() {
                       color: "#ffffff",
                     }}
                   >
-                    Primary Service Areas
+                    Coverage Zones
                   </Typography>
                   <Typography
                     sx={{
@@ -156,7 +229,8 @@ export default function RegionalReach() {
                       lineHeight: 1.65,
                     }}
                   >
-                    Our primary service areas include the cities below, along with nearby communities across the broader Niagara-to-Guelph corridor.
+                    We work across these broader regions — not limited to specific cities.
+                    If your community sits near any of these zones, we can serve you.
                   </Typography>
                 </Box>
 
@@ -169,47 +243,76 @@ export default function RegionalReach() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Milton to Niagara
+                  Southern Ontario
                 </Typography>
               </Box>
 
-              <Box
-                sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1.25,
-                  mb: 2,
-                }}
-              >
-                {PRIMARY_CITIES.map((area) => (
-                  <Chip
-                    key={area}
-                    label={area}
-                    icon={<LocationOnOutlinedIcon fontSize="small" />}
-                    sx={{
-                      bgcolor: "transparent",
-                      color: "rgba(255, 255, 255, 0.82)",
-                      border: "1px solid rgba(255, 255, 255, 0.18)",
-                      borderRadius: "8px",
-                      py: 2,
-                      px: 0.25,
-                      fontFamily: "var(--font-body)",
-                      fontSize: "0.88rem",
-                      fontWeight: 500,
-                      transition: "all 0.3s ease",
-                      "& .MuiChip-icon": {
-                        color: "var(--brand-orange)",
-                      },
-                      "&:hover": {
-                        bgcolor: "rgba(255, 255, 255, 0.05)",
-                        borderColor: "rgba(255, 255, 255, 0.38)",
-                        transform: "translateY(-2px)",
-                      },
-                    }}
-                  />
+              {/* Zone chips */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.25, mb: 3 }}>
+                {COVERAGE_ZONES.map((zone) => (
+                  <Box key={zone.label}>
+                    <Chip
+                      label={zone.label}
+                      icon={<LocationOnOutlinedIcon fontSize="small" />}
+                      sx={{
+                        bgcolor: "transparent",
+                        color: "rgba(255, 255, 255, 0.82)",
+                        border: "1px solid rgba(255, 255, 255, 0.18)",
+                        borderRadius: "8px",
+                        py: 2,
+                        px: 0.25,
+                        fontFamily: "var(--font-body)",
+                        fontSize: "0.88rem",
+                        fontWeight: 600,
+                        transition: "all 0.3s ease",
+                        "& .MuiChip-icon": { color: "var(--brand-orange)" },
+                        "&:hover": {
+                          bgcolor: "rgba(249,195,73,0.08)",
+                          borderColor: "rgba(249,195,73,0.4)",
+                          transform: "translateY(-2px)",
+                        },
+                      }}
+                    />
+                    {/* Tooltip-style sub-label below each chip — subtle, not cluttered */}
+                  </Box>
                 ))}
               </Box>
 
+              {/* ── SEO CITY NAMES — visible prose, intentionally subtle ── */}
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "rgba(255,255,255,0.02)",
+                  borderRadius: 2,
+                  border: "1px solid rgba(255,255,255,0.04)",
+                  mb: 2.5,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: "rgba(255,255,255,0.35)",
+                    fontSize: "0.78rem",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    mb: 0.75,
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  Communities we commonly serve
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "rgba(255,255,255,0.55)",
+                    fontSize: "0.83rem",
+                    lineHeight: 1.7,
+                    fontFamily: "var(--font-body)",
+                  }}
+                >
+                  {SEO_CITIES_LINE}
+                </Typography>
+              </Box>
+
+              {/* Map */}
               <Box
                 sx={{
                   position: "relative",
@@ -222,7 +325,7 @@ export default function RegionalReach() {
               >
                 <Box
                   component="iframe"
-                  title="JL Upholstery regional service area map"
+                  title="JL Upholstery regional service area map — serving Milton, Brampton, Oakville, Mississauga, Burlington, Guelph, Hamilton, Niagara Falls and all of southern Ontario"
                   src={mapSrc}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
@@ -256,7 +359,7 @@ export default function RegionalReach() {
                       mb: 0.35,
                     }}
                   >
-                    Regional Pickup & Delivery Coverage
+                    Regional Pickup &amp; Delivery Coverage
                   </Typography>
                   <Typography
                     sx={{
@@ -265,7 +368,8 @@ export default function RegionalReach() {
                       lineHeight: 1.55,
                     }}
                   >
-                    A wider view that includes Milton, the GTA, Guelph, Niagara Falls, and the communities between them.
+                    Serving southern Ontario — from the GTA and Halton to Niagara Falls, Guelph,
+                    and everywhere in between.
                   </Typography>
                 </Box>
               </Box>

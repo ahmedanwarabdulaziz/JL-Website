@@ -10,6 +10,8 @@ import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import PinterestIcon from '@mui/icons-material/Pinterest';
 import QuotationFormInline from "@/components/QuotationFormInline";
+import RegionalReach from "@/components/RegionalReach";
+
 
 const BRAND_ORANGE = "#f9c349";
 
@@ -203,6 +205,8 @@ export default function ContactPage() {
           </Grid>
         </Container>
       </Box>
+
+      <RegionalReach />
 
       <Footer />
     </Box>
