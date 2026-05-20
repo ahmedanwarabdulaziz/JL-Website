@@ -251,7 +251,7 @@ export default function HeroSection() {
               maxWidth: { xs: "100%", md: "90%" },
             }}
           >
-            Bringing 30 years of unrivaled value to the furniture you love. From residential heirlooms to commercial environments, we believe every space deserves the quality of a well-furnished life.
+            Bringing 30 years of unrivaled value to the furniture you love. From residential heirlooms to commercial environments, we believe every space deserves the quality of a well-furnished life
           </Typography>
 
           <Stack
