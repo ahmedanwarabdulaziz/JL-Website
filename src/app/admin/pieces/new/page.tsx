@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,8 +19,14 @@ import {
   Paper,
   Chip,
   FormControl,
-  FormLabel,
+  IconButton,
+  LinearProgress,
+  Tooltip,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import ImageIcon from "@mui/icons-material/Image";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag } from "@/lib/firestore";
 import {
@@ -33,37 +39,52 @@ import {
 
 const STEPS = ["Upload", "Name", "Tags", "Done"];
 
+interface ImageItem {
+  id: string; // local id
+  file: File;
+  previewUrl: string;
+  title: string;
+  slug: string;
+  slugError: string;
+  // upload result
+  uploadStatus: "pending" | "uploading" | "done" | "error";
+  uploadError: string;
+  storageKey: string;
+  publicUrl: string;
+  thumbnailUrl: string;
+}
+
+function makeId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
 export default function NewPiecePage() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const router = useRouter();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saveResults, setSaveResults] = useState<{ title: string; ok: boolean; msg?: string }[]>([]);
 
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [storageKey, setStorageKey] = useState("");
-  const [publicUrl, setPublicUrl] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
-
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
-  const [slugError, setSlugError] = useState("");
+  const [items, setItems] = useState<ImageItem[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<Record<string, string[]>>({});
   const [tagValidationErrors, setTagValidationErrors] = useState<string[]>([]);
 
+  // Step 1 shared meta description
+  const [metaDescription, setMetaDescription] = useState("");
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || !isAdmin) {
       router.replace("/login");
-      return;
     }
   }, [user, isAdmin, authLoading, router]);
 
@@ -78,80 +99,190 @@ export default function NewPiecePage() {
     if (activeStep >= 2) loadTagData();
   }, [user, isAdmin, activeStep, loadTagData]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    setError("");
-    if (f && f.type.startsWith("image/")) {
-      setFile(f);
-      setPreviewUrl(URL.createObjectURL(f));
-    } else if (f) {
-      setError("Please choose an image file.");
+  // ─── Drag & Drop ─────────────────────────────────────────────────────────────
+
+  const addFiles = (files: FileList | File[]) => {
+    const newItems: ImageItem[] = [];
+    Array.from(files).forEach((f) => {
+      if (!f.type.startsWith("image/")) return;
+      const raw = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+      const title = raw;
+      const slug = slugify(raw);
+      newItems.push({
+        id: makeId(),
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+        title,
+        slug,
+        slugError: "",
+        uploadStatus: "pending",
+        uploadError: "",
+        storageKey: "",
+        publicUrl: "",
+        thumbnailUrl: "",
+      });
+    });
+    setItems((prev) => [...prev, ...newItems]);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (dropRef.current && !dropRef.current.contains(e.relatedTarget as Node)) {
+      setIsDraggingOver(false);
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) addFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) => {
+      const item = prev.find((x) => x.id === id);
+      if (item) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((x) => x.id !== id);
+    });
+  };
+
+  // ─── Step 0 → 1: Upload all ───────────────────────────────────────────────
+
+  const [uploading, setUploading] = useState(false);
+
+  const uploadSingle = async (item: ImageItem): Promise<Partial<ImageItem>> => {
+    const formData = new FormData();
+    formData.append("file", item.file);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    return {
+      uploadStatus: "done",
+      storageKey: data.storageKey,
+      publicUrl: data.publicUrl,
+      thumbnailUrl: data.thumbnailUrl ?? "",
+    };
+  };
+
+  const handleUploadAll = async () => {
+    if (items.length === 0) {
+      setError("Please add at least one image.");
+      return;
+    }
     setError("");
     setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setStorageKey(data.storageKey);
-      setPublicUrl(data.publicUrl);
-      setThumbnailUrl(data.thumbnailUrl ?? "");
+
+    // Mark all as uploading
+    setItems((prev) => prev.map((x) => ({ ...x, uploadStatus: "uploading" as const })));
+
+    // Upload concurrently
+    const results = await Promise.allSettled(items.map((item) => uploadSingle(item)));
+
+    setItems((prev) =>
+      prev.map((item, i) => {
+        const r = results[i];
+        if (r.status === "fulfilled") {
+          return { ...item, ...r.value, uploadStatus: "done" };
+        } else {
+          return {
+            ...item,
+            uploadStatus: "error",
+            uploadError: r.reason instanceof Error ? r.reason.message : "Upload failed",
+          };
+        }
+      })
+    );
+
+    setUploading(false);
+
+    const allOk = results.every((r) => r.status === "fulfilled");
+    if (allOk) {
       setActiveStep(1);
-      if (!title) setTitle(file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "));
-      if (!slug) setSlug(slugify(file.name.replace(/\.[^.]+$/, "")));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
+    } else {
+      setError("Some images failed to upload. Remove them and retry, or fix the errors.");
     }
   };
 
-  const syncSlugFromTitle = () => {
-    const s = slugify(title);
-    setSlug(s);
+  // ─── Step 1: Name ────────────────────────────────────────────────────────────
+
+  const updateItemField = (id: string, field: "title" | "slug" | "slugError", value: string) => {
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
   };
 
-  const checkSlug = async () => {
+  const syncSlug = (id: string, title: string) => {
+    updateItemField(id, "slug", slugify(title));
+  };
+
+  const checkItemSlug = async (id: string, slug: string) => {
     if (!slug.trim()) {
-      setSlugError("Slug is required");
+      updateItemField(id, "slugError", "Slug is required");
       return;
     }
     const exists = await slugExists(slug.trim());
-    setSlugError(exists ? "This URL is already used" : "");
+    updateItemField(id, "slugError", exists ? "This URL is already used" : "");
   };
 
-  const handleNextFromName = () => {
+  const handleNextFromName = async () => {
     setError("");
-    setSlugError("");
-    if (!title.trim()) {
-      setError("Title is required");
+    // Validate titles
+    const noTitle = items.find((x) => !x.title.trim());
+    if (noTitle) {
+      setError("All pieces need a title.");
       return;
     }
-    const s = (slug.trim() || slugify(title)).trim();
-    setSlug(s);
-    slugExists(s).then((exists) => {
-      if (exists) setSlugError("This URL is already used");
-      else setActiveStep(2);
-    });
+    // Generate slugs from title where empty
+    const withSlugs = items.map((x) => ({
+      ...x,
+      slug: x.slug.trim() || slugify(x.title),
+    }));
+    setItems(withSlugs);
+
+    // Check all slugs
+    const checks = await Promise.all(
+      withSlugs.map(async (x) => {
+        const exists = await slugExists(x.slug);
+        return { id: x.id, slug: x.slug, exists };
+      })
+    );
+    const conflicts = checks.filter((c) => c.exists);
+    if (conflicts.length > 0) {
+      setItems((prev) =>
+        prev.map((x) => {
+          const conflict = conflicts.find((c) => c.id === x.id);
+          return conflict ? { ...x, slugError: "This URL is already used" } : x;
+        })
+      );
+      setError("Fix duplicate URL slugs before continuing.");
+      return;
+    }
+    setActiveStep(2);
   };
+
+  // ─── Step 2: Tags ─────────────────────────────────────────────────────────
 
   const tagsByCategory = categories.map((c) => ({
     category: c,
     tags: tags.filter((t) => t.categoryId === c.id),
   }));
 
-  const handleTagChange = (categoryId: string, tagId: string, selected: boolean, selection: "single" | "multiple") => {
+  const handleTagChange = (
+    categoryId: string,
+    tagId: string,
+    selected: boolean,
+    selection: "single" | "multiple"
+  ) => {
     setSelectedTagIds((prev) => {
       const current = prev[categoryId] ?? [];
-      if (selection === "single") {
-        return { ...prev, [categoryId]: selected ? [tagId] : [] };
-      }
+      if (selection === "single") return { ...prev, [categoryId]: selected ? [tagId] : [] };
       if (selected) return { ...prev, [categoryId]: [...current, tagId] };
       return { ...prev, [categoryId]: current.filter((id) => id !== tagId) };
     });
@@ -168,52 +299,59 @@ export default function NewPiecePage() {
     return errs.length === 0;
   };
 
+  // ─── Save all pieces ──────────────────────────────────────────────────────
+
   const handleSave = async () => {
     if (!validateTags()) return;
-    const s = slug.trim() || slugify(title);
-    const exists = await slugExists(s);
-    if (exists) {
-      setSlugError("This URL is already used");
-      return;
-    }
     setError("");
     setSaving(true);
-    try {
-      const allTagIds = Object.values(selectedTagIds).flat();
-      await createUpholsteryPiece({
-        title: title.trim(),
-        slug: s,
-        metaDescription: metaDescription.trim() || undefined,
-        storageKey,
-        publicUrl,
-        ...(thumbnailUrl ? { thumbnailUrl } : {}),
-        tagIds: allTagIds,
-        createdBy: user?.uid,
-      });
-      setActiveStep(3);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    const allTagIds = Object.values(selectedTagIds).flat();
+
+    const results = await Promise.allSettled(
+      items.map((item) =>
+        createUpholsteryPiece({
+          title: item.title.trim(),
+          slug: item.slug.trim(),
+          metaDescription: metaDescription.trim() || undefined,
+          storageKey: item.storageKey,
+          publicUrl: item.publicUrl,
+          ...(item.thumbnailUrl ? { thumbnailUrl: item.thumbnailUrl } : {}),
+          tagIds: allTagIds,
+          createdBy: user?.uid,
+        })
+      )
+    );
+
+    setSaveResults(
+      items.map((item, i) => {
+        const r = results[i];
+        return r.status === "fulfilled"
+          ? { title: item.title, ok: true }
+          : {
+              title: item.title,
+              ok: false,
+              msg: r.reason instanceof Error ? r.reason.message : "Save failed",
+            };
+      })
+    );
+    setSaving(false);
+    setActiveStep(3);
   };
+
+  // ─── Reset ────────────────────────────────────────────────────────────────
 
   const resetForm = () => {
     setActiveStep(0);
-    setFile(null);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
-    setStorageKey("");
-    setPublicUrl("");
-    setThumbnailUrl("");
-    setTitle("");
-    setSlug("");
+    items.forEach((x) => URL.revokeObjectURL(x.previewUrl));
+    setItems([]);
     setMetaDescription("");
-    setSlugError("");
     setSelectedTagIds({});
     setTagValidationErrors([]);
+    setSaveResults([]);
     setError("");
   };
+
+  // ─── Auth guard ───────────────────────────────────────────────────────────
 
   if (authLoading || !user || !isAdmin) {
     return (
@@ -223,6 +361,9 @@ export default function NewPiecePage() {
     );
   }
 
+  const uploadedCount = items.filter((x) => x.uploadStatus === "done").length;
+  const errorCount = items.filter((x) => x.uploadStatus === "error").length;
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
       <Typography
@@ -231,199 +372,411 @@ export default function NewPiecePage() {
         fontWeight={600}
         sx={{ fontSize: { xs: "1.25rem", md: "1.5rem" } }}
       >
-        Add piece
+        Add pieces
       </Typography>
 
-      <Stepper
-        activeStep={activeStep}
-        sx={{ pt: 0, pb: 2 }}
-        alternativeLabel={!isDesktop}
-      >
-          {STEPS.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
+      <Stepper activeStep={activeStep} sx={{ pt: 0, pb: 2 }} alternativeLabel={!isDesktop}>
+        {STEPS.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+      {tagValidationErrors.length > 0 && (
+        <Alert severity="warning">
+          {tagValidationErrors.map((e) => (
+            <div key={e}>{e}</div>
           ))}
-        </Stepper>
+        </Alert>
+      )}
 
-        {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-        {slugError && <Alert severity="warning">{slugError}</Alert>}
-        {tagValidationErrors.length > 0 && (
-          <Alert severity="warning">
-            {tagValidationErrors.map((e) => (
-              <div key={e}>{e}</div>
-            ))}
-          </Alert>
-        )}
-
-        {/* Step 0: Upload */}
-        {activeStep === 0 && (
-          <Stack spacing={2}>
-            <FormControl fullWidth>
-              <FormLabel>Image</FormLabel>
-              <Button
-                component="label"
-                variant="outlined"
-                fullWidth
-                sx={{ minHeight: 52, mt: 0.5 }}
-              >
-                Choose image
-                <input type="file" accept="image/*" hidden onChange={handleFileChange} />
-              </Button>
-            </FormControl>
-            {previewUrl && (
-              <Box sx={{ textAlign: "center" }}>
-                <Box
-                  component="img"
-                  src={previewUrl}
-                  alt="Preview"
-                  sx={{ maxWidth: "100%", maxHeight: 240, objectFit: "contain", borderRadius: 1 }}
-                />
-              </Box>
-            )}
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              disabled={!file || uploading}
-              onClick={handleUpload}
-              sx={{ minHeight: 48 }}
+      {/* ── Step 0: Drop zone ── */}
+      {activeStep === 0 && (
+        <Stack spacing={2}>
+          {/* Drop zone */}
+          <FormControl fullWidth>
+            <Box
+              ref={dropRef}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                border: "2px dashed",
+                borderColor: isDraggingOver ? "primary.main" : "divider",
+                borderRadius: 2,
+                p: { xs: 4, md: 6 },
+                textAlign: "center",
+                cursor: "pointer",
+                bgcolor: isDraggingOver ? "action.hover" : "background.paper",
+                transition: "all 0.2s ease",
+                "&:hover": { borderColor: "primary.light", bgcolor: "action.hover" },
+              }}
             >
-              {uploading ? <CircularProgress size={24} color="inherit" /> : "Upload & continue"}
-            </Button>
-          </Stack>
-        )}
+              <ImageIcon sx={{ fontSize: 48, color: isDraggingOver ? "primary.main" : "text.disabled", mb: 1 }} />
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                {isDraggingOver ? "Drop images here" : "Drag & drop images here"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                or click to browse — supports multiple images at once
+              </Typography>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={handleFileInput}
+              />
+            </Box>
+          </FormControl>
 
-        {/* Step 1: Name */}
-        {activeStep === 1 && (
-          <Stack spacing={2}>
-            <TextField
-              label="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              fullWidth
-              required
-              slotProps={{ input: { style: { minHeight: 44 } } }}
-            />
-            <TextField
-              label="URL slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              onBlur={checkSlug}
-              helperText="Used in the page URL (e.g. /upholstery/blue-velvet-sofa)"
-              fullWidth
-              slotProps={{ input: { style: { minHeight: 44 } } }}
-            />
-            <Button variant="outlined" size="small" onClick={syncSlugFromTitle} sx={{ alignSelf: "flex-start" }}>
-              Generate slug from title
-            </Button>
-            <TextField
-              label="Meta description (optional)"
-              value={metaDescription}
-              onChange={(e) => setMetaDescription(e.target.value)}
-              fullWidth
-              multiline
-              rows={2}
-              slotProps={{ input: { style: { minHeight: 44 } } }}
-            />
-            <Button variant="contained" size="large" fullWidth onClick={handleNextFromName} sx={{ minHeight: 48 }}>
-              Next: Add tags
-            </Button>
-          </Stack>
-        )}
-
-        {/* Step 2: Tags - one card per category, chip selection */}
-        {activeStep === 2 && (
-          <Stack spacing={3}>
-            {tagsByCategory.map(({ category, tags: catTags }) => {
-              const selected = selectedTagIds[category.id] ?? [];
-              const isSingle = category.selection === "single";
-              return (
-                <Paper
-                  key={category.id}
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    borderColor: category.type === "mandatory" && selected.length === 0 ? "error.light" : "divider",
-                    borderWidth: category.type === "mandatory" && selected.length === 0 ? 1.5 : 1,
-                  }}
-                >
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
-                      <Typography variant="subtitle1" fontWeight={600} color="text.primary">
-                        {category.name}
-                      </Typography>
-                      {category.type === "mandatory" && (
-                        <Chip label="Required" size="small" color="primary" variant="outlined" />
-                      )}
-                      <Chip
-                        label={isSingle ? "Pick one" : "Pick one or more"}
+          {/* Thumbnails grid */}
+          {items.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                {items.length} image{items.length > 1 ? "s" : ""} selected
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "repeat(2, 1fr)",
+                    sm: "repeat(3, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
+                  gap: 1.5,
+                }}
+              >
+                {items.map((item) => (
+                  <Paper
+                    key={item.id}
+                    variant="outlined"
+                    sx={{ borderRadius: 2, overflow: "hidden", position: "relative" }}
+                  >
+                    <Box
+                      component="img"
+                      src={item.previewUrl}
+                      alt={item.title}
+                      sx={{
+                        width: "100%",
+                        aspectRatio: "4/3",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                    {/* Status overlay while uploading */}
+                    {item.uploadStatus === "uploading" && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          bgcolor: "rgba(0,0,0,0.45)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CircularProgress size={28} sx={{ color: "#fff" }} />
+                      </Box>
+                    )}
+                    {item.uploadStatus === "error" && (
+                      <Tooltip title={item.uploadError || "Upload failed"}>
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            bgcolor: "rgba(211,47,47,0.5)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <ErrorOutlineIcon sx={{ color: "#fff", fontSize: 32 }} />
+                        </Box>
+                      </Tooltip>
+                    )}
+                    {/* Remove button */}
+                    {item.uploadStatus !== "uploading" && (
+                      <IconButton
                         size="small"
-                        variant="outlined"
-                        sx={{ fontWeight: 500 }}
+                        onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                        sx={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          bgcolor: "rgba(0,0,0,0.55)",
+                          color: "#fff",
+                          "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
+                          width: 24,
+                          height: 24,
+                        }}
+                      >
+                        <CloseIcon sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    )}
+                    {/* Filename */}
+                    <Box sx={{ p: 0.75, bgcolor: "background.paper" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        noWrap
+                        sx={{ display: "block", fontSize: "0.68rem" }}
+                      >
+                        {item.file.name}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Upload status bar */}
+          {uploading && (
+            <Box>
+              <LinearProgress />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                Uploading {uploadedCount}/{items.length}…
+              </Typography>
+            </Box>
+          )}
+          {errorCount > 0 && !uploading && (
+            <Alert severity="warning">
+              {errorCount} image{errorCount > 1 ? "s" : ""} failed. Remove them and try again.
+            </Alert>
+          )}
+
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={items.length === 0 || uploading}
+            onClick={handleUploadAll}
+            sx={{ minHeight: 48 }}
+          >
+            {uploading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              `Upload ${items.length > 0 ? items.length + " image" + (items.length > 1 ? "s" : "") : ""} & continue`
+            )}
+          </Button>
+        </Stack>
+      )}
+
+      {/* ── Step 1: Name each piece ── */}
+      {activeStep === 1 && (
+        <Stack spacing={3}>
+          <Alert severity="info" icon={false}>
+            Each image will become its own gallery piece. Give each one a title and slug, then set
+            shared tags in the next step.
+          </Alert>
+
+          <TextField
+            label="Shared meta description (optional)"
+            value={metaDescription}
+            onChange={(e) => setMetaDescription(e.target.value)}
+            fullWidth
+            multiline
+            rows={2}
+            helperText="Applied to all pieces in this batch"
+          />
+
+          <Stack spacing={2}>
+            {items.map((item, idx) => (
+              <Paper key={item.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-start">
+                  <Box
+                    component="img"
+                    src={item.previewUrl}
+                    alt={item.title}
+                    sx={{
+                      width: { xs: "100%", sm: 120 },
+                      height: { xs: 160, sm: 90 },
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Stack spacing={1.5} flex={1} width="100%">
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                        #{idx + 1}
+                      </Typography>
+                      <TextField
+                        label="Title"
+                        value={item.title}
+                        onChange={(e) => updateItemField(item.id, "title", e.target.value)}
+                        fullWidth
+                        required
+                        size="small"
+                        error={!item.title.trim()}
                       />
                     </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      {catTags.length === 0
-                        ? "No tags in this category yet. Add tags in Tag system first."
-                        : isSingle
-                          ? "Select one tag."
-                          : "Select one or more tags."}
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
-                      {catTags.map((t) => {
-                        const isSelected = selected.includes(t.id);
-                        return (
-                          <Chip
-                            key={t.id}
-                            label={t.label}
-                            onClick={() =>
-                              handleTagChange(category.id, t.id, !isSelected, category.selection)
-                            }
-                            variant={isSelected ? "filled" : "outlined"}
-                            color={isSelected ? "primary" : "default"}
-                            sx={{
-                              minHeight: 40,
-                              fontWeight: 500,
-                              cursor: "pointer",
-                              "&:hover": { opacity: 0.9 },
-                            }}
-                          />
-                        );
-                      })}
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <TextField
+                        label="URL slug"
+                        value={item.slug}
+                        onChange={(e) => updateItemField(item.id, "slug", e.target.value)}
+                        onBlur={() => checkItemSlug(item.id, item.slug)}
+                        helperText={item.slugError || "e.g. blue-velvet-sofa"}
+                        error={!!item.slugError}
+                        fullWidth
+                        size="small"
+                      />
+                      <Tooltip title="Generate slug from title">
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => syncSlug(item.id, item.title)}
+                          sx={{ minWidth: 80, flexShrink: 0, height: 40, mt: 0 }}
+                        >
+                          Auto
+                        </Button>
+                      </Tooltip>
                     </Stack>
                   </Stack>
-                </Paper>
-              );
-            })}
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              disabled={saving}
-              onClick={handleSave}
-              sx={{ minHeight: 48, mt: 1 }}
-            >
-              {saving ? <CircularProgress size={24} color="inherit" /> : "Save piece"}
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+
+          <Button variant="contained" size="large" fullWidth onClick={handleNextFromName} sx={{ minHeight: 48 }}>
+            Next: Add tags →
+          </Button>
+        </Stack>
+      )}
+
+      {/* ── Step 2: Tags (shared for all) ── */}
+      {activeStep === 2 && (
+        <Stack spacing={3}>
+          <Alert severity="info" icon={false}>
+            These tags will be applied to <strong>all {items.length} piece{items.length > 1 ? "s" : ""}</strong> in
+            this batch. You can edit each piece individually after saving.
+          </Alert>
+
+          {tagsByCategory.map(({ category, tags: catTags }) => {
+            const selected = selectedTagIds[category.id] ?? [];
+            const isSingle = category.selection === "single";
+            return (
+              <Paper
+                key={category.id}
+                variant="outlined"
+                sx={{
+                  p: 2.5,
+                  borderRadius: 2,
+                  borderColor:
+                    category.type === "mandatory" && selected.length === 0
+                      ? "error.light"
+                      : "divider",
+                  borderWidth:
+                    category.type === "mandatory" && selected.length === 0 ? 1.5 : 1,
+                }}
+              >
+                <Stack spacing={1.5}>
+                  <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
+                    <Typography variant="subtitle1" fontWeight={600} color="text.primary">
+                      {category.name}
+                    </Typography>
+                    {category.type === "mandatory" && (
+                      <Chip label="Required" size="small" color="primary" variant="outlined" />
+                    )}
+                    <Chip
+                      label={isSingle ? "Pick one" : "Pick one or more"}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontWeight: 500 }}
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">
+                    {catTags.length === 0
+                      ? "No tags in this category yet. Add tags in Tag system first."
+                      : isSingle
+                      ? "Select one tag."
+                      : "Select one or more tags."}
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={1} useFlexGap>
+                    {catTags.map((t) => {
+                      const isSelected = selected.includes(t.id);
+                      return (
+                        <Chip
+                          key={t.id}
+                          label={t.label}
+                          onClick={() =>
+                            handleTagChange(category.id, t.id, !isSelected, category.selection)
+                          }
+                          variant={isSelected ? "filled" : "outlined"}
+                          color={isSelected ? "primary" : "default"}
+                          sx={{
+                            minHeight: 40,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            "&:hover": { opacity: 0.9 },
+                          }}
+                        />
+                      );
+                    })}
+                  </Stack>
+                </Stack>
+              </Paper>
+            );
+          })}
+
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            disabled={saving}
+            onClick={handleSave}
+            sx={{ minHeight: 48, mt: 1 }}
+          >
+            {saving ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              `Save ${items.length} piece${items.length > 1 ? "s" : ""}`
+            )}
+          </Button>
+        </Stack>
+      )}
+
+      {/* ── Step 3: Done ── */}
+      {activeStep === 3 && (
+        <Stack spacing={2} sx={{ py: 2 }}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            {saveResults.filter((r) => r.ok).length} of {saveResults.length} pieces saved
+            successfully.
+          </Typography>
+          <Stack spacing={1}>
+            {saveResults.map((r) => (
+              <Stack key={r.title} direction="row" spacing={1} alignItems="center">
+                {r.ok ? (
+                  <CheckCircleIcon sx={{ color: "success.main", fontSize: 20 }} />
+                ) : (
+                  <ErrorOutlineIcon sx={{ color: "error.main", fontSize: 20 }} />
+                )}
+                <Typography variant="body2">
+                  <strong>{r.title}</strong>
+                  {!r.ok && r.msg && (
+                    <Typography component="span" variant="caption" color="error.main" sx={{ ml: 1 }}>
+                      — {r.msg}
+                    </Typography>
+                  )}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+          <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Button variant="contained" onClick={resetForm} sx={{ minHeight: 44 }}>
+              Add more pieces
+            </Button>
+            <Button component={Link} href="/admin/pieces" variant="outlined" sx={{ minHeight: 44 }}>
+              Back to gallery
             </Button>
           </Stack>
-        )}
-
-        {/* Step 3: Done */}
-        {activeStep === 3 && (
-          <Stack spacing={2} sx={{ py: 2 }}>
-            <Typography color="text.secondary">Piece saved. You can add another or go back to admin.</Typography>
-            <Stack direction="row" spacing={2} flexWrap="wrap">
-              <Button variant="contained" onClick={resetForm} sx={{ minHeight: 44 }}>
-                Add another
-              </Button>
-              <Button component={Link} href="/admin" variant="outlined" sx={{ minHeight: 44 }}>
-                Back to admin
-              </Button>
-            </Stack>
-          </Stack>
-        )}
+        </Stack>
+      )}
     </Box>
   );
 }
