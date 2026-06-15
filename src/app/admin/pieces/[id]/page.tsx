@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
@@ -14,11 +14,17 @@ import {
   Paper,
   Chip,
   Tooltip,
+  IconButton,
+  Divider,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
+import RotateLeftIcon from "@mui/icons-material/RotateLeft";
+import RotateRightIcon from "@mui/icons-material/RotateRight";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import CloseIcon from "@mui/icons-material/Close";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag, UpholsteryPiece } from "@/lib/firestore";
 import {
@@ -32,6 +38,19 @@ import {
   toggleTagFeaturedImage,
   type StoredImage,
 } from "@/lib/firestore";
+
+// Accepted image formats – everything is converted to WebP on the server
+const ACCEPT_FORMATS =
+  "image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,image/tiff,image/bmp";
+
+type Rotation = 0 | 90 | 180 | 270;
+
+function rotateLeft(r: Rotation): Rotation {
+  return ((r + 270) % 360) as Rotation;
+}
+function rotateRight(r: Rotation): Rotation {
+  return ((r + 90) % 360) as Rotation;
+}
 
 export default function EditPiecePage() {
   const router = useRouter();
@@ -54,6 +73,14 @@ export default function EditPiecePage() {
 
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+
+  // ─── Replace Image state ──────────────────────────────────────────────────
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const [replaceFile, setReplaceFile] = useState<File | null>(null);
+  const [replacePreview, setReplacePreview] = useState<string | null>(null);
+  const [replaceRotation, setReplaceRotation] = useState<Rotation>(0);
+  const [replacing, setReplacing] = useState(false);
+  const [replaceError, setReplaceError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -118,12 +145,12 @@ export default function EditPiecePage() {
   const handleToggleFeatured = async (tagId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!piece) return;
-    
+
     const tag = tags.find(t => t.id === tagId);
     if (!tag) return;
-    
+
     const isCurrentlyFeatured = tag.featuredImages?.some(img => img.storageKey === piece.storageKey) || false;
-    
+
     setTogglingStarFor(tagId);
     try {
       const imgObj: StoredImage = {
@@ -132,7 +159,7 @@ export default function EditPiecePage() {
         thumbnailUrl: piece.thumbnailUrl
       };
       await toggleTagFeaturedImage(tagId, imgObj, !isCurrentlyFeatured);
-      
+
       // Refresh tags list to update UI
       const updatedTags = await getTags();
       setTags(updatedTags);
@@ -154,6 +181,27 @@ export default function EditPiecePage() {
     return errs.length === 0;
   };
 
+  // ─── Replace image handlers ───────────────────────────────────────────────
+
+  const handleReplaceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (replacePreview) URL.revokeObjectURL(replacePreview);
+    setReplaceFile(f);
+    setReplacePreview(URL.createObjectURL(f));
+    setReplaceRotation(0);
+    setReplaceError("");
+    e.target.value = "";
+  };
+
+  const cancelReplace = () => {
+    if (replacePreview) URL.revokeObjectURL(replacePreview);
+    setReplaceFile(null);
+    setReplacePreview(null);
+    setReplaceRotation(0);
+    setReplaceError("");
+  };
+
   const handleSave = async () => {
     if (!piece || !validateTags()) return;
     const s = slug.trim() || slugify(title);
@@ -166,17 +214,42 @@ export default function EditPiecePage() {
     setSaving(true);
     try {
       const allTagIds = Object.values(selectedTagIds).flat();
+
+      // If the user chose a replacement image, upload it first
+      let newImageFields: { storageKey?: string; publicUrl?: string; thumbnailUrl?: string } = {};
+      if (replaceFile) {
+        setReplacing(true);
+        const fd = new FormData();
+        fd.append("file", replaceFile);
+        if (replaceRotation !== 0) fd.append("rotation", String(replaceRotation));
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        setReplacing(false);
+        if (!res.ok) {
+          setReplaceError(data.error || "Image upload failed");
+          setSaving(false);
+          return;
+        }
+        newImageFields = {
+          storageKey: data.storageKey,
+          publicUrl: data.publicUrl,
+          thumbnailUrl: data.thumbnailUrl ?? "",
+        };
+      }
+
       await updateUpholsteryPiece(piece.id, {
         title: title.trim(),
         slug: s,
         metaDescription: metaDescription.trim() || undefined,
         tagIds: allTagIds,
+        ...newImageFields,
       });
       router.push("/admin/pieces");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
+      setReplacing(false);
     }
   };
 
@@ -244,12 +317,131 @@ export default function EditPiecePage() {
       )}
 
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-        <Box
-          component="img"
-          src={piece.thumbnailUrl || piece.publicUrl}
-          alt={piece.title}
-          sx={{ maxWidth: 280, width: "100%", borderRadius: 1, mb: 2, display: "block" }}
+        {/* ── Current image + Replace controls ── */}
+        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+          Image
+        </Typography>
+
+        {replacePreview ? (
+          /* New image preview with rotate controls */
+          <Stack spacing={1.5} sx={{ mb: 2 }}>
+            <Box sx={{ position: "relative", display: "inline-flex", alignSelf: "flex-start" }}>
+              <Box
+                sx={{
+                  width: 280,
+                  height: 210,
+                  overflow: "hidden",
+                  borderRadius: 1,
+                  bgcolor: "action.hover",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={replacePreview}
+                  alt="New image preview"
+                  sx={{
+                    width: replaceRotation === 90 || replaceRotation === 270 ? "75%" : "100%",
+                    height: replaceRotation === 90 || replaceRotation === 270 ? "75%" : "100%",
+                    objectFit: "cover",
+                    transform: `rotate(${replaceRotation}deg)`,
+                    transition: "transform 0.25s ease",
+                  }}
+                />
+              </Box>
+              {/* Close / cancel replace */}
+              <IconButton
+                size="small"
+                onClick={cancelReplace}
+                sx={{
+                  position: "absolute",
+                  top: 4,
+                  right: 4,
+                  bgcolor: "rgba(0,0,0,0.55)",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
+                  width: 24,
+                  height: 24,
+                }}
+              >
+                <CloseIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Box>
+
+            {/* Rotate buttons */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="caption" color="text.secondary">
+                Rotation:
+              </Typography>
+              <Tooltip title="Rotate left 90°">
+                <IconButton
+                  size="small"
+                  onClick={() => setReplaceRotation(rotateLeft(replaceRotation))}
+                  sx={{ bgcolor: "action.hover" }}
+                >
+                  <RotateLeftIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Rotate right 90°">
+                <IconButton
+                  size="small"
+                  onClick={() => setReplaceRotation(rotateRight(replaceRotation))}
+                  sx={{ bgcolor: "action.hover" }}
+                >
+                  <RotateRightIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="caption" color="text.secondary">
+                {replaceRotation}°
+              </Typography>
+            </Stack>
+
+            {replaceError && (
+              <Alert severity="error" sx={{ mt: 0.5 }}>
+                {replaceError}
+              </Alert>
+            )}
+
+            <Typography variant="caption" color="text.secondary">
+              New image will be saved when you click &quot;Save changes&quot;.
+            </Typography>
+          </Stack>
+        ) : (
+          /* Current stored image */
+          <Box
+            component="img"
+            src={piece.thumbnailUrl || piece.publicUrl}
+            alt={piece.title}
+            sx={{ maxWidth: 280, width: "100%", borderRadius: 1, mb: 1.5, display: "block" }}
+          />
+        )}
+
+        {/* Replace image button */}
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<SwapHorizIcon />}
+          onClick={() => replaceInputRef.current?.click()}
+          disabled={replacing}
+          sx={{ mb: 2 }}
+        >
+          {replaceFile ? "Choose different image" : "Replace image"}
+        </Button>
+        <input
+          ref={replaceInputRef}
+          type="file"
+          accept={ACCEPT_FORMATS}
+          hidden
+          onChange={handleReplaceFileChange}
         />
+        <Typography variant="caption" color="text.disabled" sx={{ display: "block", mb: 2 }}>
+          JPEG · PNG · HEIC · AVIF · WebP · GIF · TIFF · BMP — converted to WebP automatically
+        </Typography>
+
+        <Divider sx={{ mb: 2 }} />
+
         <Stack spacing={2}>
           <TextField
             label="Title"
@@ -310,7 +502,7 @@ export default function EditPiecePage() {
                   {catTags.map((t) => {
                     const isSelected = selected.includes(t.id);
                     const isFeatured = t.featuredImages?.some(img => img.storageKey === piece?.storageKey);
-                    
+
                     return (
                       <Chip
                         key={t.id}
@@ -345,8 +537,14 @@ export default function EditPiecePage() {
       </Stack>
 
       <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
-        <Button variant="contained" startIcon={<EditIcon />} onClick={handleSave} disabled={saving} sx={{ minHeight: 44 }}>
-          {saving ? <CircularProgress size={20} color="inherit" /> : "Save changes"}
+        <Button
+          variant="contained"
+          startIcon={replacing ? <CircularProgress size={16} color="inherit" /> : <EditIcon />}
+          onClick={handleSave}
+          disabled={saving || replacing}
+          sx={{ minHeight: 44 }}
+        >
+          {saving || replacing ? (replacing ? "Uploading image…" : "Saving…") : "Save changes"}
         </Button>
         <Button component={Link} href="/admin/pieces" variant="outlined" sx={{ minHeight: 44 }}>
           Cancel

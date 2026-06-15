@@ -27,6 +27,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import ImageIcon from "@mui/icons-material/Image";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import RotateLeftIcon from "@mui/icons-material/RotateLeft";
+import RotateRightIcon from "@mui/icons-material/RotateRight";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TagCategory, Tag } from "@/lib/firestore";
 import {
@@ -39,10 +41,17 @@ import {
 
 const STEPS = ["Upload", "Name", "Tags", "Done"];
 
+// Accepted image formats – everything is converted to WebP on the server
+const ACCEPT_FORMATS =
+  "image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,image/tiff,image/bmp";
+
+type Rotation = 0 | 90 | 180 | 270;
+
 interface ImageItem {
   id: string; // local id
   file: File;
   previewUrl: string;
+  rotation: Rotation;
   title: string;
   slug: string;
   slugError: string;
@@ -56,6 +65,13 @@ interface ImageItem {
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function rotateLeft(r: Rotation): Rotation {
+  return ((r + 270) % 360) as Rotation;
+}
+function rotateRight(r: Rotation): Rotation {
+  return ((r + 90) % 360) as Rotation;
 }
 
 export default function NewPiecePage() {
@@ -112,6 +128,7 @@ export default function NewPiecePage() {
         id: makeId(),
         file: f,
         previewUrl: URL.createObjectURL(f),
+        rotation: 0,
         title,
         slug,
         slugError: "",
@@ -155,6 +172,16 @@ export default function NewPiecePage() {
     });
   };
 
+  const rotateItem = (id: string, dir: "left" | "right") => {
+    setItems((prev) =>
+      prev.map((x) =>
+        x.id === id
+          ? { ...x, rotation: dir === "left" ? rotateLeft(x.rotation) : rotateRight(x.rotation) }
+          : x
+      )
+    );
+  };
+
   // ─── Step 0 → 1: Upload all ───────────────────────────────────────────────
 
   const [uploading, setUploading] = useState(false);
@@ -162,6 +189,9 @@ export default function NewPiecePage() {
   const uploadSingle = async (item: ImageItem): Promise<Partial<ImageItem>> => {
     const formData = new FormData();
     formData.append("file", item.file);
+    if (item.rotation !== 0) {
+      formData.append("rotation", String(item.rotation));
+    }
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Upload failed");
@@ -422,10 +452,13 @@ export default function NewPiecePage() {
               <Typography variant="body2" color="text.secondary">
                 or click to browse — supports multiple images at once
               </Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ display: "block", mt: 0.5 }}>
+                JPEG · PNG · HEIC · AVIF · WebP · GIF · TIFF · BMP — all optimised &amp; converted to WebP
+              </Typography>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={ACCEPT_FORMATS}
                 multiple
                 hidden
                 onChange={handleFileInput}
@@ -456,17 +489,33 @@ export default function NewPiecePage() {
                     variant="outlined"
                     sx={{ borderRadius: 2, overflow: "hidden", position: "relative" }}
                   >
+                    {/* Image with CSS rotation for live preview */}
                     <Box
-                      component="img"
-                      src={item.previewUrl}
-                      alt={item.title}
                       sx={{
                         width: "100%",
                         aspectRatio: "4/3",
-                        objectFit: "cover",
-                        display: "block",
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "action.hover",
                       }}
-                    />
+                    >
+                      <Box
+                        component="img"
+                        src={item.previewUrl}
+                        alt={item.title}
+                        sx={{
+                          width: item.rotation === 90 || item.rotation === 270 ? "75%" : "100%",
+                          height: item.rotation === 90 || item.rotation === 270 ? "75%" : "100%",
+                          objectFit: "cover",
+                          display: "block",
+                          transform: `rotate(${item.rotation}deg)`,
+                          transition: "transform 0.25s ease",
+                        }}
+                      />
+                    </Box>
+
                     {/* Status overlay while uploading */}
                     {item.uploadStatus === "uploading" && (
                       <Box
@@ -498,25 +547,72 @@ export default function NewPiecePage() {
                         </Box>
                       </Tooltip>
                     )}
-                    {/* Remove button */}
+
+                    {/* Controls – only shown when not uploading */}
                     {item.uploadStatus !== "uploading" && (
-                      <IconButton
-                        size="small"
-                        onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
-                        sx={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          bgcolor: "rgba(0,0,0,0.55)",
-                          color: "#fff",
-                          "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
-                          width: 24,
-                          height: 24,
-                        }}
-                      >
-                        <CloseIcon sx={{ fontSize: 14 }} />
-                      </IconButton>
+                      <>
+                        {/* Remove button — top right */}
+                        <IconButton
+                          size="small"
+                          onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                          sx={{
+                            position: "absolute",
+                            top: 4,
+                            right: 4,
+                            bgcolor: "rgba(0,0,0,0.55)",
+                            color: "#fff",
+                            "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
+                            width: 24,
+                            height: 24,
+                          }}
+                        >
+                          <CloseIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+
+                        {/* Rotate buttons — bottom left, above filename bar */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            bottom: 28,
+                            left: 4,
+                            display: "flex",
+                            gap: 0.25,
+                          }}
+                        >
+                          <Tooltip title="Rotate left 90°">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); rotateItem(item.id, "left"); }}
+                              sx={{
+                                bgcolor: "rgba(0,0,0,0.55)",
+                                color: "#fff",
+                                "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
+                                width: 24,
+                                height: 24,
+                              }}
+                            >
+                              <RotateLeftIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Rotate right 90°">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); rotateItem(item.id, "right"); }}
+                              sx={{
+                                bgcolor: "rgba(0,0,0,0.55)",
+                                color: "#fff",
+                                "&:hover": { bgcolor: "rgba(0,0,0,0.75)" },
+                                width: 24,
+                                height: 24,
+                              }}
+                            >
+                              <RotateRightIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </>
                     )}
+
                     {/* Filename */}
                     <Box sx={{ p: 0.75, bgcolor: "background.paper" }}>
                       <Typography
@@ -589,17 +685,31 @@ export default function NewPiecePage() {
               <Paper key={item.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-start">
                   <Box
-                    component="img"
-                    src={item.previewUrl}
-                    alt={item.title}
                     sx={{
                       width: { xs: "100%", sm: 120 },
                       height: { xs: 160, sm: 90 },
-                      objectFit: "cover",
+                      overflow: "hidden",
                       borderRadius: 1,
                       flexShrink: 0,
+                      bgcolor: "action.hover",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                  />
+                  >
+                    <Box
+                      component="img"
+                      src={item.previewUrl}
+                      alt={item.title}
+                      sx={{
+                        width: item.rotation === 90 || item.rotation === 270 ? "60%" : "100%",
+                        height: item.rotation === 90 || item.rotation === 270 ? "60%" : "100%",
+                        objectFit: "cover",
+                        transform: `rotate(${item.rotation}deg)`,
+                        transition: "transform 0.25s ease",
+                      }}
+                    />
+                  </Box>
                   <Stack spacing={1.5} flex={1} width="100%">
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
