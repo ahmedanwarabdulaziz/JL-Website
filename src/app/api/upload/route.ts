@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
     }
 
     const type = file.type.toLowerCase();
-    if (!type.startsWith("image/") && !ACCEPTED_TYPES.has(type)) {
+    const isHeicExt = /\.(heic|heif)$/i.test(file.name);
+    if (!type.startsWith("image/") && !ACCEPTED_TYPES.has(type) && !isHeicExt) {
       return NextResponse.json({ error: "File must be an image (JPEG, PNG, HEIC, AVIF, WebP, GIF, TIFF, BMP)" }, { status: 400 });
     }
 

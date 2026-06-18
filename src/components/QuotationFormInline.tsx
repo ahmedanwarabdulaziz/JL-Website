@@ -229,7 +229,7 @@ export default function QuotationFormInline() {
         setErrors((prev) => ({ ...prev, file: `"${f.name}" exceeds 10MB.` }));
         continue;
       }
-      if (!f.type.startsWith("image/")) {
+      if (!f.type.startsWith("image/") && !/\.(heic|heif)$/i.test(f.name)) {
         setErrors((prev) => ({ ...prev, file: `"${f.name}" is not an image.` }));
         continue;
       }

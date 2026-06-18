@@ -120,7 +120,7 @@ export default function NewPiecePage() {
   const addFiles = (files: FileList | File[]) => {
     const newItems: ImageItem[] = [];
     Array.from(files).forEach((f) => {
-      if (!f.type.startsWith("image/")) return;
+      if (!f.type.startsWith("image/") && !/\.(heic|heif)$/i.test(f.name)) return;
       const raw = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
       const title = raw;
       const slug = slugify(raw);
