@@ -215,7 +215,7 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
     setImages((prev) => prev.filter((img) => img.id !== imageId));
   }, []);
 
-  const handleFilesSelected = (fileList: FileList | null) => {
+  const handleFilesSelected = async (fileList: FileList | null) => {
     if (!fileList) return;
     const newFiles = Array.from(fileList);
     const remaining = MAX_IMAGES - images.length;
@@ -227,11 +227,30 @@ export default function QuotationModal({ open, onClose }: { open: boolean; onClo
         setErrors((prev) => ({ ...prev, file: `"${f.name}" exceeds 10MB.` }));
         continue;
       }
-      if (!f.type.startsWith("image/") && !/\.(heic|heif)$/i.test(f.name)) {
-        setErrors((prev) => ({ ...prev, file: `"${f.name}" is not an image.` }));
+      
+      let processFile = f;
+      if (/\.(heic|heif)$/i.test(f.name)) {
+        try {
+          const heic2any = (await import("heic2any")).default;
+          const converted = await heic2any({
+            blob: f,
+            toType: "image/jpeg",
+            quality: 0.8,
+          });
+          const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
+          processFile = new File([convertedBlob], f.name.replace(/\.(heic|heif)$/i, ".jpg"), {
+            type: "image/jpeg",
+          });
+        } catch (err) {
+          console.error("Failed to convert HEIC image:", err);
+        }
+      }
+
+      if (!processFile.type.startsWith("image/")) {
+        setErrors((prev) => ({ ...prev, file: `"${processFile.name}" is not an image.` }));
         continue;
       }
-      startUpload(f);
+      startUpload(processFile);
     }
   };
 

@@ -117,17 +117,39 @@ export default function NewPiecePage() {
 
   // ─── Drag & Drop ─────────────────────────────────────────────────────────────
 
-  const addFiles = (files: FileList | File[]) => {
-    const newItems: ImageItem[] = [];
-    Array.from(files).forEach((f) => {
-      if (!f.type.startsWith("image/") && !/\.(heic|heif)$/i.test(f.name)) return;
-      const raw = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+  const addFiles = async (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name)
+    );
+
+    for (const f of validFiles) {
+      let processFile = f;
+
+      if (/\.(heic|heif)$/i.test(f.name)) {
+        try {
+          const heic2any = (await import("heic2any")).default;
+          const converted = await heic2any({
+            blob: f,
+            toType: "image/jpeg",
+            quality: 0.8,
+          });
+          const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
+          processFile = new File([convertedBlob], f.name.replace(/\.(heic|heif)$/i, ".jpg"), {
+            type: "image/jpeg",
+          });
+        } catch (err) {
+          console.error("Failed to convert HEIC image:", err);
+        }
+      }
+
+      const raw = processFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
       const title = raw;
       const slug = slugify(raw);
-      newItems.push({
+      
+      const newItem: ImageItem = {
         id: makeId(),
-        file: f,
-        previewUrl: URL.createObjectURL(f),
+        file: processFile,
+        previewUrl: URL.createObjectURL(processFile),
         rotation: 0,
         title,
         slug,
@@ -137,9 +159,10 @@ export default function NewPiecePage() {
         storageKey: "",
         publicUrl: "",
         thumbnailUrl: "",
-      });
-    });
-    setItems((prev) => [...prev, ...newItems]);
+      };
+      
+      setItems((prev) => [...prev, newItem]);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
